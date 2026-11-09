@@ -47,11 +47,6 @@
 // MD bpp. (Defined in emulator/g_main.cpp; g_main.hpp is a C++ header.)
 extern uint8_t bppMD;
 
-// PWM temporary registers. (Defined in pwm.c; not in pwm.h.)
-extern unsigned int PWM_Cycle_Tmp;
-extern unsigned int PWM_FIFO_L_Tmp;
-extern unsigned int PWM_FIFO_R_Tmp;
-
 
 /** Global variables. **/
 
@@ -116,8 +111,7 @@ static inline void set_w(unsigned int *p, uint16_t w)
 /** Subtract cycles from the current SH2's I/O cycle counter. **/
 static inline void cycle_io(uint32_t cycles)
 {
-	if (SH2_Cur)
-		SH2_Cur->Cycle_IO -= cycles;
+	SH2_Cur->Cycle_IO -= cycles;
 }
 
 /** Big-endian accesses to a raw byte buffer. **/
@@ -159,25 +153,70 @@ static inline uint16_t fifo_word(uint32_t byte_ofs)
 	return _32X_FIFO_B[(byte_ofs - 8) >> 1];
 }
 
-/** PWM_FULL_TAB entry for (read pointer, write pointer). **/
-static inline uint8_t pwm_full(unsigned int rp, unsigned int wp)
+
+/*****************************************************************
+ * Helpers shared with the 68000 side (mem_m68k_32x.c).          *
+ *****************************************************************/
+
+/**
+ * _32X_PWM_Full(): PWM_FULL_TAB entry for (read pointer, write pointer).
+ * (The pointers come from savestates too, so the index is masked.)
+ */
+uint8_t _32X_PWM_Full(unsigned int rp, unsigned int wp)
 {
 	return PWM_FULL_TAB[((rp * PWM_BUF_SIZE) + wp) & ((PWM_BUF_SIZE * PWM_BUF_SIZE) - 1)];
 }
 
-/** SH2 DMA requests from a memory handler. (The asm saves ebp around them.) **/
-static void dma0_request(SH2_CONTEXT *sh2, uint8_t state)
+/** _32X_Write_FM(): Frame buffer access mode (FM, bit 7). **/
+void _32X_Write_FM(uint8_t data)
 {
-	SH2_CONTEXT *cur = SH2_Cur;
-	SH2_DMA0_Request(sh2, state);
-	SH2_Cur = cur;
+	const uint8_t fm = (uint8_t)(data & 0x80);
+	const uint8_t changed = (uint8_t)(_32X_FM ^ fm);
+	_32X_FM = fm;
+	if (changed)
+		_32X_Set_FB();
 }
 
-static void dma1_request(SH2_CONTEXT *sh2, uint8_t state)
+/**
+ * _32X_Write_FB_Control(): 32X VDP frame buffer control (FS).
+ * The swap is delayed until VBlank unless the display is blank.
+ */
+void _32X_Write_FB_Control(uint8_t data)
 {
-	SH2_CONTEXT *cur = SH2_Cur;
-	SH2_DMA1_Request(sh2, state);
-	SH2_Cur = cur;
+	const uint8_t mode = get_b(_32X_VDP.Mode, 0);
+	const uint8_t state_h = get_b(_32X_VDP.State, 1);
+
+	set_b(&_32X_VDP.State, 2, data);
+	if ((mode & 3) && !(state_h & 0x80))
+	{
+		// Not in VBlank: the frame buffer swap is delayed.
+		return;
+	}
+
+	set_b(&_32X_VDP.State, 0, data);
+	_32X_Set_FB();
+}
+
+/** _32X_Write_CRam(): Update one CRam entry and its adjusted (host color) value. **/
+void _32X_Write_CRam(unsigned int idx, uint16_t data)
+{
+	idx &= 0xFF;
+	_32X_VDP_CRam[idx] = data;
+	if (bppMD == 32)
+		_32X_VDP_CRam_Adjusted.u32[idx] = _32X_Palette.u32[data];
+	else
+		_32X_VDP_CRam_Adjusted.u16[idx] = _32X_Palette.u16[data];
+}
+
+/**
+ * _32X_VDP_Ram_Write_Word(): Write a word to _32X_VDP_Ram.
+ * Auto fill can address one word past the end of the frame buffers
+ * (the asm then writes past _32X_VDP_Ram); that write is dropped.
+ */
+void _32X_VDP_Ram_Write_Word(uint32_t byte_ofs, uint16_t data)
+{
+	if (byte_ofs < sizeof(_32X_VDP_Ram))
+		_32X_VDP_Ram.u16[byte_ofs >> 1] = data;
 }
 
 
@@ -188,12 +227,12 @@ static void dma1_request(SH2_CONTEXT *sh2, uint8_t state)
 /** Byte read of the PWM pulse registers: the FIFO "full" state. **/
 static uint8_t pwm_pulse_l_rb(void)
 {
-	return pwm_full(PWM_RP_L, PWM_WP_L);
+	return _32X_PWM_Full(PWM_RP_L, PWM_WP_L);
 }
 
 static uint8_t pwm_pulse_r_rb(void)
 {
-	return pwm_full(PWM_RP_R, PWM_WP_R);
+	return _32X_PWM_Full(PWM_RP_R, PWM_WP_R);
 }
 
 /**
@@ -272,7 +311,7 @@ static uint16_t sh2_rw_fifo(void)
 	{
 		// FIFO read end.
 		set_w(&_32X_DREQ_ST, 0);
-		dma0_request(&M_SH2, 0);	// we use M_SH2 instead of EBP (like real 32X).
+		SH2_DMA0_Request(&M_SH2, 0);	// we use M_SH2 instead of EBP (like real 32X).
 		return val;
 	}
 
@@ -287,7 +326,7 @@ static uint16_t sh2_rw_fifo(void)
 
 	// FIFO B empty.
 	set_b(&_32X_DREQ_ST, 1, 0x40);
-	dma0_request(&M_SH2, 0);	// we use M_SH2 instead of EBP (like real 32X).
+	SH2_DMA0_Request(&M_SH2, 0);	// we use M_SH2 instead of EBP (like real 32X).
 	return val;
 }
 
@@ -342,9 +381,9 @@ static uint16_t sh2_32x_reg_rw(uint32_t adr, int slave, uint8_t al_in)
 			return (uint16_t)PWM_Cycle_Tmp;
 		case 26:	// PWM_Pulse_L
 		case 28:	// PWM_Pulse_C
-			return (uint16_t)((pwm_full(PWM_RP_L, PWM_WP_L) << 8) | al_in);
+			return (uint16_t)((_32X_PWM_Full(PWM_RP_L, PWM_WP_L) << 8) | al_in);
 		case 27:	// PWM_Pulse_R
-			return (uint16_t)((pwm_full(PWM_RP_R, PWM_WP_R) << 8) | al_in);
+			return (uint16_t)((_32X_PWM_Full(PWM_RP_R, PWM_WP_R) << 8) | al_in);
 
 		default:
 			return 0;
@@ -407,25 +446,13 @@ static uint16_t sh2_vdp_reg_rw(uint32_t adr)
  * 32X system registers: write.  *
  *********************************/
 
-/** IntC_H: frame buffer access mode (FM). **/
-static void sh2_write_fm(uint8_t fm)
-{
-	uint8_t changed;
-
-	fm &= 0x80;
-	changed = _32X_FM ^ fm;
-	_32X_FM = fm;
-	if (changed)
-		_32X_Set_FB();
-}
-
 /** PWM_DMA: if the FIFO is now full, deassert DREQ1 on both SH2s. **/
 static void pwm_dma(unsigned int rp, unsigned int wp)
 {
-	if (pwm_full(rp, wp) & 0x80)
+	if (_32X_PWM_Full(rp, wp) & 0x80)
 	{
-		dma1_request(&S_SH2, 0);
-		dma1_request(&M_SH2, 0);
+		SH2_DMA1_Request(&S_SH2, 0);
+		SH2_DMA1_Request(&M_SH2, 0);
 	}
 }
 
@@ -434,7 +461,7 @@ static void pwm_pulse_l_w(uint16_t data)
 	unsigned int rp = PWM_RP_L;
 	unsigned int wp = PWM_WP_L;
 
-	if (pwm_full(rp, wp) & 0x80)
+	if (_32X_PWM_Full(rp, wp) & 0x80)
 		return;
 
 	PWM_FIFO_L[wp & 7] = data;
@@ -448,7 +475,7 @@ static void pwm_pulse_r_w(uint16_t data)
 	unsigned int rp = PWM_RP_R;
 	unsigned int wp = PWM_WP_R;
 
-	if (pwm_full(rp, wp) & 0x80)
+	if (_32X_PWM_Full(rp, wp) & 0x80)
 		return;
 
 	PWM_FIFO_R[wp & 7] = data;
@@ -463,7 +490,7 @@ static void pwm_pulse_c_w(uint16_t data)
 	unsigned int rp = PWM_RP_L;
 	unsigned int wp = PWM_WP_L;
 
-	if (pwm_full(rp, wp) & 0x80)
+	if (_32X_PWM_Full(rp, wp) & 0x80)
 		return;
 
 	PWM_FIFO_L[wp & 7] = data;
@@ -493,7 +520,7 @@ static void sh2_32x_reg_wb(uint32_t adr, uint8_t data, int slave)
 	switch (adr)
 	{
 		case 0x00:	// IntC_H
-			sh2_write_fm(data);
+			_32X_Write_FM(data);
 			break;
 		case 0x01:	// IntC_L
 			if (slave)
@@ -579,7 +606,7 @@ static void sh2_32x_reg_ww(uint32_t adr, uint16_t data, int slave)
 				_32X_SINT = dl;
 			else
 				_32X_MINT = dl;
-			sh2_write_fm(dh);
+			_32X_Write_FM(dh);
 			break;
 		case 2:		// HCnt (the asm uses the byte handler: low byte only)
 			_32X_HIC = dl;
@@ -620,28 +647,13 @@ static void sh2_32x_reg_ww(uint32_t adr, uint16_t data, int slave)
  * 32X VDP registers: write.     *
  *********************************/
 
-static void sh2_vdp_wb_state(uint8_t data)
-{
-	const uint8_t mode = get_b(_32X_VDP.Mode, 0);
-	const uint8_t state_h = get_b(_32X_VDP.State, 1);
-
-	set_b(&_32X_VDP.State, 2, data);
-	if ((mode & 3) && !(state_h & 0x80))
-	{
-		// Not in VBlank: the frame buffer swap is delayed.
-		return;
-	}
-
-	set_b(&_32X_VDP.State, 0, data);
-	_32X_Set_FB();
-}
-
 /**
  * sh2_vdp_ww_af_data(): Auto fill.
  * Writes AF_Len + 1 words of AF_Data to the frame buffer that isn't being
  * displayed, starting at AF_St. Only the low byte of the address advances
  * (with wraparound), except that a 32-bit store at low byte 0xFF writes its
- * second word to the next 256-word line, as in the asm.
+ * second word to the next 256-word line, as in the asm. (A write past the
+ * end of the frame buffers is dropped.)
  */
 static void sh2_vdp_ww_af_data(uint16_t data)
 {
@@ -655,7 +667,7 @@ static void sh2_vdp_ww_af_data(uint16_t data)
 	count = get_b(_32X_VDP.AF_Len, 0) + 1;
 	lo = (uint8_t)st;
 
-#define AF_PUT(word_idx) (*vdp_ram_w(base + ((uint32_t)(word_idx) * 2)) = data)
+#define AF_PUT(word_idx) _32X_VDP_Ram_Write_Word(base + ((uint32_t)(word_idx) * 2), data)
 
 	if ((count >> 1) == 0)
 	{
@@ -698,7 +710,7 @@ static void sh2_vdp_reg_wb(uint32_t adr, uint8_t data)
 		case 0x1:	set_b(&_32X_VDP.Mode, 0, data);		break;
 		case 0x3:	set_b(&_32X_VDP.Mode, 2, data);		break;	// Shift
 		case 0x5:	set_b(&_32X_VDP.AF_Len, 0, data);	break;
-		case 0xB:	sh2_vdp_wb_state(data);			break;
+		case 0xB:	_32X_Write_FB_Control(data);			break;
 		default:	break;
 	}
 }
@@ -720,25 +732,9 @@ static void sh2_vdp_reg_ww(uint32_t adr, uint16_t data)
 		case 2:	set_b(&_32X_VDP.AF_Len, 0, dl);		break;
 		case 3:	set_w(&_32X_VDP.AF_St, data);		break;
 		case 4:	sh2_vdp_ww_af_data(data);		break;
-		case 5:	sh2_vdp_wb_state(dl);			break;
+		case 5:	_32X_Write_FB_Control(dl);			break;
 		default:	break;
 	}
-}
-
-
-/*********************************
- * 32X palette (CRam): write.    *
- *********************************/
-
-/** Update one CRam entry and its adjusted (host color) value. **/
-static void cram_write(uint32_t idx, uint16_t data)
-{
-	idx &= 0xFF;
-	_32X_VDP_CRam[idx] = data;
-	if (bppMD == 32)
-		_32X_VDP_CRam_Adjusted.u32[idx] = _32X_Palette.u32[data];
-	else
-		_32X_VDP_CRam_Adjusted.u16[idx] = _32X_Palette.u16[data];
 }
 
 
@@ -898,7 +894,7 @@ static void sh2_write_word_vdp(uint32_t adr, uint16_t data)
 		// Palette.
 		if (adr & 0xFFBC01)
 			return;
-		cram_write((adr & 0x1FE) >> 1, data);
+		_32X_Write_CRam((adr & 0x1FE) >> 1, data);
 		return;
 	}
 	sh2_vdp_reg_ww(adr, data);
@@ -940,8 +936,8 @@ static void sh2_write_long_vdp(uint32_t adr, uint32_t data)
 		if (adr & 0xFFBC03)
 			return;
 		idx = (adr & 0x1FC) >> 1;
-		cram_write(idx + 0, (uint16_t)(data >> 16));
-		cram_write(idx + 1, (uint16_t)data);
+		_32X_Write_CRam(idx + 0, (uint16_t)(data >> 16));
+		_32X_Write_CRam(idx + 1, (uint16_t)data);
 		return;
 	}
 

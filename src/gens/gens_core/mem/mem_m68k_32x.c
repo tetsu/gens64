@@ -60,14 +60,6 @@
 
 #define CYCLE_FOR_TAKE_Z80_BUS_GENESIS 16
 
-// MD bpp. (Defined in emulator/g_main.cpp; g_main.hpp is a C++ header.)
-extern uint8_t bppMD;
-
-// PWM temporary registers. (Defined in pwm.c; not declared in pwm.h.)
-extern unsigned int PWM_Cycle_Tmp;
-extern unsigned int PWM_FIFO_L_Tmp;
-extern unsigned int PWM_FIFO_R_Tmp;
-
 /**
  * Z80 bus tables. (Defined in mem_z80.c; not declared in mem_z80.h.)
  * These typedefs must match the ones in mem_z80.c.
@@ -300,27 +292,6 @@ static inline uint8_t fake_fetch_next(void)
 	return al;
 }
 
-/**
- * pwm_full(): PWM FIFO "full" table lookup.
- * asm: [PWM_FULL_TAB + rp * PWM_BUF_SIZE + wp]
- */
-static inline uint8_t pwm_full(unsigned int rp, unsigned int wp)
-{
-	return PWM_FULL_TAB[(rp * PWM_BUF_SIZE) + wp];
-}
-
-/**
- * vdp_ram_write_word(): Write a word to _32X_VDP_Ram.
- * @param byte_offset Byte offset. (even)
- */
-static inline void vdp_ram_write_word(uint32_t byte_offset, uint16_t data)
-{
-	// The asm can write one word past the end of _32X_VDP_Ram in the
-	// autofill loop; ignore that write instead of corrupting memory.
-	if (byte_offset < sizeof(_32X_VDP_Ram))
-		_32X_VDP_Ram.u16[byte_offset >> 1] = data;
-}
-
 
 /******** 32X extended Read Byte ********/
 
@@ -377,10 +348,10 @@ static uint8_t _32X_reg_read_byte(unsigned int reg)
 
 		case 0x34:	// PWM_Pulse_L
 		case 0x38:	// PWM_Pulse_L (sic; the asm's Pulse_C isn't used here)
-			return pwm_full(PWM_RP_L, PWM_WP_L);
+			return _32X_PWM_Full(PWM_RP_L, PWM_WP_L);
 
 		case 0x36:	// PWM_Pulse_R
-			return pwm_full(PWM_RP_R, PWM_WP_R);
+			return _32X_PWM_Full(PWM_RP_R, PWM_WP_R);
 
 		default:
 			break;
@@ -586,10 +557,10 @@ static uint16_t _32X_reg_read_word(unsigned int reg)
 		// high byte is the "full" table entry. (mov eax, [WP]; mov ah, [...])
 		case 0x34:	// PWM_Pulse_L
 		case 0x38:	// PWM_Pulse_C
-			return (uint16_t)((pwm_full(PWM_RP_L, PWM_WP_L) << 8) |
+			return (uint16_t)((_32X_PWM_Full(PWM_RP_L, PWM_WP_L) << 8) |
 					  (PWM_WP_L & 0xFF));
 		case 0x36:	// PWM_Pulse_R
-			return (uint16_t)((pwm_full(PWM_RP_R, PWM_WP_R) << 8) |
+			return (uint16_t)((_32X_PWM_Full(PWM_RP_R, PWM_WP_R) << 8) |
 					  (PWM_WP_R & 0xFF));
 
 		default:
@@ -904,32 +875,13 @@ static void dreq_ctrl_write(uint8_t data)
 }
 
 /**
- * vdp_state_write(): 32X VDP frame buffer control register. (0xA1518B)
- * @param data Low byte of the written data.
- */
-static void vdp_state_write(uint8_t data)
-{
-	const uint8_t mode0 = get_byte_uint(_32X_VDP.Mode, 0);
-	const uint8_t state1 = get_byte_uint(_32X_VDP.State, 1);
-
-	_32X_VDP.State = set_byte_uint(_32X_VDP.State, 2, data);
-
-	// Swap the frame buffer now if the display is blank or in VBlank.
-	if ((mode0 & 3) == 0 || (state1 & 0x80))
-	{
-		_32X_VDP.State = set_byte_uint(_32X_VDP.State, 0, data);
-		_32X_Set_FB();
-	}
-}
-
-/**
  * pwm_fifo_push_l() / pwm_fifo_push_r(): Push a value onto a PWM FIFO,
  * unless it's full.
  */
 static void pwm_fifo_push_l(uint16_t data)
 {
-	const unsigned int wp = PWM_WP_L;
-	if (pwm_full(PWM_RP_L, wp) & 0x80)
+	const unsigned int wp = PWM_WP_L & (PWM_BUF_SIZE - 1);
+	if (_32X_PWM_Full(PWM_RP_L, wp) & 0x80)
 		return;
 	PWM_FIFO_L[wp] = data;
 	PWM_WP_L = (wp + 1) & (PWM_BUF_SIZE - 1);
@@ -937,8 +889,8 @@ static void pwm_fifo_push_l(uint16_t data)
 
 static void pwm_fifo_push_r(uint16_t data)
 {
-	const unsigned int wp = PWM_WP_R;
-	if (pwm_full(PWM_RP_R, wp) & 0x80)
+	const unsigned int wp = PWM_WP_R & (PWM_BUF_SIZE - 1);
+	if (_32X_PWM_Full(PWM_RP_R, wp) & 0x80)
 		return;
 	PWM_FIFO_R[wp] = data;
 	PWM_WP_R = (wp + 1) & (PWM_BUF_SIZE - 1);
@@ -950,8 +902,8 @@ static void pwm_fifo_push_r(uint16_t data)
  */
 static void pwm_fifo_push_mono(uint16_t data)
 {
-	const unsigned int wp = PWM_WP_L;
-	if (pwm_full(PWM_RP_L, wp) & 0x80)
+	const unsigned int wp = PWM_WP_L & (PWM_BUF_SIZE - 1);
+	if (_32X_PWM_Full(PWM_RP_L, wp) & 0x80)
 		return;
 	PWM_FIFO_L[wp] = data;
 	PWM_FIFO_R[wp] = data;
@@ -969,21 +921,10 @@ static void pwm_fifo_push_mono(uint16_t data)
  */
 static void _32X_reg_write_byte(unsigned int reg, uint8_t data)
 {
-	uint8_t fm;
-
 	switch (reg)
 	{
 		case 0x00:	// ACR_H
-			fm = (uint8_t)(data & 0x80);
-			if (_32X_FM ^ fm)
-			{
-				_32X_FM = fm;
-				_32X_Set_FB();
-			}
-			else
-			{
-				_32X_FM = fm;
-			}
+			_32X_Write_FM(data);
 			return;
 
 		case 0x01:	// ACR_L
@@ -1069,7 +1010,7 @@ static void _32X_vdp_reg_write_byte(unsigned int reg, uint8_t data)
 			_32X_VDP.AF_Len = set_byte_uint(_32X_VDP.AF_Len, 0, data);
 			break;
 		case 0xB:	// VDP_State
-			vdp_state_write(data);
+			_32X_Write_FB_Control(data);
 			break;
 		default:	// bad
 			break;
@@ -1243,21 +1184,11 @@ static void _32X_reg_write_word(unsigned int reg, uint16_t data)
 {
 	const uint8_t lo = (uint8_t)(data & 0xFF);
 	const uint8_t hi = (uint8_t)(data >> 8);
-	uint8_t fm;
 
 	switch (reg)
 	{
 		case 0x00:	// ACR
-			fm = (uint8_t)(hi & 0x80);
-			if (_32X_FM ^ fm)
-			{
-				_32X_FM = fm;
-				_32X_Set_FB();
-			}
-			else
-			{
-				_32X_FM = fm;
-			}
+			_32X_Write_FM(hi);
 			acr_low_write(lo);
 			return;
 
@@ -1345,7 +1276,7 @@ static void vdp_autofill(uint16_t data)
 	if (count == 0)
 	{
 		// Spec_Fill: a single word.
-		vdp_ram_write_word(fb_base + (st * 2), data);
+		_32X_VDP_Ram_Write_Word(fb_base + (st * 2), data);
 		st = (st & ~0xFFU) | ((st + 1) & 0xFF);
 		_32X_VDP.AF_St = st;
 		return;
@@ -1353,15 +1284,15 @@ static void vdp_autofill(uint16_t data)
 
 	if (carry)
 	{
-		vdp_ram_write_word(fb_base + (st * 2), data);
+		_32X_VDP_Ram_Write_Word(fb_base + (st * 2), data);
 		st = (st & ~0xFFU) | ((st + 1) & 0xFF);
 	}
 
 	// asm: mov [edi + ebx*2], eax (two words); add bl, 2; dec ecx; jns
 	for (;;)
 	{
-		vdp_ram_write_word(fb_base + (st * 2), data);
-		vdp_ram_write_word(fb_base + (st * 2) + 2, data);
+		_32X_VDP_Ram_Write_Word(fb_base + (st * 2), data);
+		_32X_VDP_Ram_Write_Word(fb_base + (st * 2) + 2, data);
 		st = (st & ~0xFFU) | ((st + 2) & 0xFF);
 		count--;
 		if ((int32_t)count < 0)
@@ -1398,27 +1329,11 @@ static void _32X_vdp_reg_write_word(unsigned int reg, uint16_t data)
 			vdp_autofill(data);
 			break;
 		case 0xA:	// VDP_State
-			vdp_state_write(lo);
+			_32X_Write_FB_Control(lo);
 			break;
 		default:	// bad
 			break;
 	}
-}
-
-/**
- * _32X_cram_write(): Write a word to the 32X CRAM. (0xA15200 - 0xA153FE)
- */
-static void _32X_cram_write(uint32_t address, uint16_t data)
-{
-	const unsigned int idx = (address - 0xA15200) >> 1;
-
-	_32X_VDP_CRam[idx] = data;
-
-	// Adjust 32X CRam.
-	if (bppMD == 32)
-		_32X_VDP_CRam_Adjusted.u32[idx] = _32X_Palette.u32[data];
-	else
-		_32X_VDP_CRam_Adjusted.u16[idx] = _32X_Palette.u16[data];
 }
 
 static void M68K_Write_Word_Misc_32X(uint32_t address, uint16_t data)
@@ -1469,7 +1384,7 @@ static void M68K_Write_Word_Misc_32X(uint32_t address, uint16_t data)
 			// 32X CRAM.
 			if (address >= 0xA15400)
 				return;
-			_32X_cram_write(address, data);
+			_32X_Write_CRam((address - 0xA15200) >> 1, data);
 			return;
 		}
 

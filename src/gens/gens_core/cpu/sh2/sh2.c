@@ -391,6 +391,18 @@ void FASTCALL Def_WRITEL (uint32_t adr, uint32_t data)
 
 // IMPORTANT : *Fetch have to be DWORD aligned !!!!
 
+/**
+ * SH2_Fetch_Base(): Fetch region base, such that
+ * host address = base + SH2 address. (Fetch - low_adr, rounded to a word.)
+ * Computed with integer arithmetic: the base usually points far outside
+ * the Fetch buffer, so pointer arithmetic on Fetch would be undefined
+ * (and on 64-bit hosts, &Fetch[0 - (low_adr >> 1)] doesn't even wrap).
+ */
+static uint16_t *SH2_Fetch_Base(uint16_t *Fetch, uint32_t low_adr)
+{
+	return (uint16_t*)((uintptr_t)Fetch - (uintptr_t)(low_adr & ~1U));
+}
+
 void SH2_Add_Fetch(SH2_CONTEXT *SH2, uint32_t low_adr, uint32_t high_adr, uint16_t *Fetch)
 {
 	uint32_t i;
@@ -401,7 +413,7 @@ void SH2_Add_Fetch(SH2_CONTEXT *SH2, uint32_t low_adr, uint32_t high_adr, uint16
 		{
 			SH2->Fetch_Region[i].Low_Adr = low_adr;
 			SH2->Fetch_Region[i].High_Adr = high_adr;
-			SH2->Fetch_Region[i].Fetch_Reg = &Fetch[0 - (low_adr >> 1)];
+			SH2->Fetch_Region[i].Fetch_Reg = SH2_Fetch_Base(Fetch, low_adr);
 			break;
 		}
 	}
@@ -417,7 +429,7 @@ void SH2_Set_Fetch_Reg(SH2_CONTEXT *SH2, uint32_t reg, uint32_t low_adr,
 	
 	SH2->Fetch_Region[reg].Low_Adr = low_adr;
 	SH2->Fetch_Region[reg].High_Adr = high_adr;
-	SH2->Fetch_Region[reg].Fetch_Reg = &Fetch[0 - (low_adr >> 1)];
+	SH2->Fetch_Region[reg].Fetch_Reg = SH2_Fetch_Base(Fetch, low_adr);
 }
 
 

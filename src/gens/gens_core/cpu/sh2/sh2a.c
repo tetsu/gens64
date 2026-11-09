@@ -16,8 +16,8 @@
  * Instructions are fetched from PC - 4, like on a real SH2 pipeline.       *
  *                                                                          *
  * C core context convention (see sh2.h): SH2_CONTEXT.PC and .DS_PC are SH2 *
- * addresses (the asm stores host pointers there). Base_PC / Fetch_Start / *
- * Fetch_End are the fetch cache for the region containing PC.             *
+ * addresses (the asm stores host pointers there). Base_PC (host pointer)  *
+ * and Fetch_Start / Fetch_End (SH2 addresses) cache the region of PC.     *
  ****************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -83,22 +83,6 @@ static inline uint32_t fetch16(uintptr_t host)
 }
 
 /**
- * region_base(): Host base for a fetch region, such that
- * host address = base + SH2 address.
- * sh2.c stores Fetch_Reg = &Fetch[0 - (low_adr >> 1)], i.e. Fetch plus an
- * UNSIGNED 32-bit element index. On a 32-bit host that wraps to the
- * intended "Fetch - low_adr" bias (what the asm uses directly), but on a
- * 64-bit host it does not. Undo sh2.c's index exactly and rebuild the bias
- * with pointer-width arithmetic. (Correct on both 32-bit and 64-bit hosts.)
- */
-static inline uintptr_t region_base(const FETCHREG *r)
-{
-	const uint32_t idx = 0u - (r->Low_Adr >> 1);
-	const uintptr_t fetch = (uintptr_t)r->Fetch_Reg - ((uintptr_t)idx * 2u);
-	return fetch - ((uintptr_t)(r->Low_Adr >> 1) * 2u);
-}
-
-/**
  * fetch_search(): The asm REBASE_PC search loop.
  * @return 1 if found (Fetch_Start/Fetch_End/Base_PC updated);
  *         0 on error (the SH2 is marked faulted, Base_PC = Fetch_End = 0).
@@ -114,7 +98,8 @@ static int fetch_search(SH2_CONTEXT *c, uint32_t pc)
 		{
 			c->Fetch_Start = r->Low_Adr;
 			c->Fetch_End = r->High_Adr;
-			c->Base_PC = region_base(r);
+			// sh2.c stores the region base: host address = base + SH2 address.
+			c->Base_PC = (uintptr_t)r->Fetch_Reg;
 			return 1;
 		}
 
@@ -138,7 +123,7 @@ static int fetch_search(SH2_CONTEXT *c, uint32_t pc)
  */
 static int fast_rebase(uint32_t pc)
 {
-	if (pc < (uint32_t)sh2->Fetch_Start || pc > (uint32_t)sh2->Fetch_End)
+	if (pc < sh2->Fetch_Start || pc > sh2->Fetch_End)
 	{
 		if (!fetch_search(sh2, pc))
 		{

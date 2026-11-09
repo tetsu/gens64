@@ -87,20 +87,19 @@ struct __SH2_context
 	uint32_t     PC;
 
 	uint32_t     Status;
+	// Fetch cache for the region containing PC:
+	// host address = Base_PC + SH2 address.
+	// Fetch_Start / Fetch_End are the region's SH2 address bounds.
 #ifdef GENS_CORE_C
-	// C core: PC (above) is the SH2 address of the next instruction.
-	// Base_PC / Fetch_Start / Fetch_End are a host-pointer fetch cache
-	// for the region containing PC. They are rebuilt from PC by
-	// SH2_Set_PC() and are not meaningful in savestates.
+	// C core: PC (above) is the SH2 address of the next instruction,
+	// and Base_PC is rebuilt from it by SH2_Set_PC().
 	uintptr_t    Base_PC;
-	uintptr_t    Fetch_Start;
-	uintptr_t    Fetch_End;
 #else
-	// asm core: PC, Base_PC, Fetch_Start and Fetch_End are host pointers.
+	// asm core: PC is a host pointer (Base_PC + SH2 address).
 	uint32_t     Base_PC;
+#endif
 	uint32_t     Fetch_Start;
 	uint32_t     Fetch_End;
-#endif
 
 	uint32_t     DS_Inst;
 	uint32_t     DS_PC;

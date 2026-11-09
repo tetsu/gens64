@@ -105,6 +105,15 @@ void FASTCALL SH2_Write_Byte_Ram(uint32_t adr, uint8_t data);
 void FASTCALL SH2_Write_Word_Ram(uint32_t adr, uint16_t data);
 void FASTCALL SH2_Write_Long_Ram(uint32_t adr, uint32_t data);
 
+#ifdef GENS_CORE_C
+/* 32X helpers shared by the SH2 and 68000 memory maps. (mem_sh2.c) */
+uint8_t _32X_PWM_Full(unsigned int rp, unsigned int wp);
+void _32X_Write_FM(uint8_t data);
+void _32X_Write_FB_Control(uint8_t data);
+void _32X_Write_CRam(unsigned int idx, uint16_t data);
+void _32X_VDP_Ram_Write_Word(uint32_t byte_ofs, uint16_t data);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

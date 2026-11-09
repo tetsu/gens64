@@ -46,6 +46,11 @@ extern unsigned int PWM_Enable;
 extern unsigned int PWM_Out_R;
 extern unsigned int PWM_Out_L;
 
+/* Temporary registers. (Byte writes to the PWM registers.) */
+extern unsigned int PWM_Cycle_Tmp;
+extern unsigned int PWM_FIFO_L_Tmp;
+extern unsigned int PWM_FIFO_R_Tmp;
+
 void PWM_Init(void);
 
 #if 0
