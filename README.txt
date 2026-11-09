@@ -7,7 +7,6 @@ Copyright (c) 2026 by Tetsuro Mori (64-bit port)
 
 This version of Gens is maintained by David Korth.
 The 64-bit (x86_64) port was done by Tetsuro Mori. See section 1.1.
-E-mail: gerbilsoft@verizon.net
 
 For news on Gens/GS, visit Sonic Retro:
 http://www.sonicretro.org
