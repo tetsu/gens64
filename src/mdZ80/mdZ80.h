@@ -10,6 +10,10 @@
 #define __MDZ80_H
 
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "libgsft/gsft_fastcall.h"
 #include <stdint.h>
 
@@ -311,6 +315,11 @@ uint32_t FASTCALL z80_Exec(Z80_CONTEXT *z80, int odo);
 
 void mdZ80_init(Z80_CONTEXT *z80);
 void mdZ80_reset(Z80_CONTEXT *z80);
+
+#ifdef GENS_CORE_C
+/* C core only: reset internal state not stored in Z80_CONTEXT. */
+void mdZ80_c_reset_core(void);
+#endif
 
 
 unsigned int mdZ80_get_PC(Z80_CONTEXT *z80);

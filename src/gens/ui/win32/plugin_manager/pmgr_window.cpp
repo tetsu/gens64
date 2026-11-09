@@ -414,7 +414,7 @@ static void WINAPI pmgr_window_add_plugin_to_list(mdp_t *plugin, int err, const 
 	{
 		// No description or name.
 		char tmp[64];
-		szprintf(tmp, sizeof(tmp), "[No name: 0x%08lX]", (unsigned long)plugin);
+		szprintf(tmp, sizeof(tmp), "[No name: %p]", (void*)plugin);
 		pluginName = string(tmp);
 	}
 	

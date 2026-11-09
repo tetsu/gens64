@@ -157,7 +157,7 @@ void Sync_Gens_Window_FileMenu_ROMHistory(void)
 	static const unsigned int posROMHistory = 2;
 #endif /* GENS_CDROM */
 	
-	DeleteMenu(mnuFile, (UINT)mnuROMHistory, MF_BYCOMMAND);
+	DeleteMenu(mnuFile, (UINT)(UINT_PTR)mnuROMHistory, MF_BYCOMMAND);
 	DeleteMenu(mnuFile, IDM_FILE_ROMHISTORY, MF_BYCOMMAND);
 	gens_menu_map.erase(IDM_FILE_ROMHISTORY);
 	if (mnuROMHistory)
@@ -205,7 +205,7 @@ void Sync_Gens_Window_FileMenu_ROMHistory(void)
 	
 	// If no recent ROMs were found, disable the ROM History menu.
 	if (romNum == 0)
-		EnableMenuItem(mnuFile, (UINT)mnuROMHistory, MF_BYCOMMAND | MF_GRAYED);
+		EnableMenuItem(mnuFile, (UINT)(UINT_PTR)mnuROMHistory, MF_BYCOMMAND | MF_GRAYED);
 }
 
 
@@ -224,7 +224,7 @@ void Sync_Gens_Window_GraphicsMenu(void)
 	flags = (vdraw_cur_backend_flags & VDRAW_BACKEND_FLAG_VSYNC ? MF_ENABLED : MF_GRAYED);
 	EnableMenuItem(mnuGraphics, IDM_GRAPHICS_VSYNC, MF_BYCOMMAND | flags);
 	flags = (vdraw_cur_backend_flags & VDRAW_BACKEND_FLAG_STRETCH ? MF_ENABLED : MF_GRAYED);
-	EnableMenuItem(mnuGraphics, (UINT)(gens_menu_find_item(IDM_GRAPHICS_STRETCH)), MF_BYCOMMAND | flags);
+	EnableMenuItem(mnuGraphics, (UINT)(UINT_PTR)(gens_menu_find_item(IDM_GRAPHICS_STRETCH)), MF_BYCOMMAND | flags);
 	
 	// Color depth.
 	uint16_t id;
@@ -322,7 +322,7 @@ static void WINAPI Sync_Gens_Window_GraphicsMenu_Backend(HMENU parent, int posit
 	HMENU mnuBackend = gens_menu_find_item(IDM_GRAPHICS_BACKEND);
 	
 	// Delete and/or recreate the Backend submenu.
-	DeleteMenu(parent, (UINT)mnuBackend, MF_BYCOMMAND);
+	DeleteMenu(parent, (UINT)(UINT_PTR)mnuBackend, MF_BYCOMMAND);
 	DeleteMenu(parent, IDM_GRAPHICS_BACKEND, MF_BYCOMMAND);
 	gens_menu_map.erase(IDM_GRAPHICS_BACKEND);
 	if (mnuBackend)
@@ -370,7 +370,7 @@ static void WINAPI Sync_Gens_Window_GraphicsMenu_Render(HMENU parent, int positi
 	HMENU mnuRender = gens_menu_find_item(IDM_GRAPHICS_RENDER);
 	
 	// Delete and/or recreate the Render submenu.
-	DeleteMenu(parent, (UINT)mnuRender, MF_BYCOMMAND);
+	DeleteMenu(parent, (UINT)(UINT_PTR)mnuRender, MF_BYCOMMAND);
 	DeleteMenu(parent, IDM_GRAPHICS_RENDER, MF_BYCOMMAND);
 	gens_menu_map.erase(IDM_GRAPHICS_RENDER);
 	if (mnuRender)
@@ -488,7 +488,7 @@ static void WINAPI Sync_Gens_Window_CPUMenu_Debug(HMENU parent, int position)
 	HMENU mnuDebug = gens_menu_find_item(IDM_CPU_DEBUG);
 	
 	// Delete and/or recreate the Debug submenu.
-	DeleteMenu(parent, (UINT)mnuDebug, MF_BYCOMMAND);
+	DeleteMenu(parent, (UINT)(UINT_PTR)mnuDebug, MF_BYCOMMAND);
 	gens_menu_map.erase(IDM_CPU_DEBUG);
 	if (mnuDebug)
 		DestroyMenu(mnuDebug);
@@ -612,7 +612,7 @@ void Sync_Gens_Window_PluginsMenu(void)
 	// Delete and/or recreate the Plugins menu.
 	static const unsigned int posPlugins = 5;
 	
-	DeleteMenu(MainMenu, (UINT)mnuPlugins, MF_BYCOMMAND);
+	DeleteMenu(MainMenu, (UINT)(UINT_PTR)mnuPlugins, MF_BYCOMMAND);
 	gens_menu_map.erase(IDM_PLUGINS_MENU);
 	if (mnuPlugins)
 		DestroyMenu(mnuPlugins);

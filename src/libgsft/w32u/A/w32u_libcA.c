@@ -19,6 +19,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.           *
  ***************************************************************************/
 
+// _mkdir(). (Must be included before w32u_libc.h, which redefines mkdir.)
+#include <direct.h>
+
 #include "w32u_libcA.h"
 #include "w32u_libc.h"
 #include "w32u_charset.h"

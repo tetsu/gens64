@@ -46,7 +46,7 @@ extern int (WINAPI *pListView_InsertColumnU)(HWND HWnd, int iCol, const LV_COLUM
 extern int (WINAPI *pListView_InsertItemU)(HWND hWnd, const LVITEMA *pItem);
 #define ListView_SetCheckStateU(w,i,f)		ListView_SetItemStateU(w,i,INDEXTOSTATEIMAGEMASK((f)+1),LVIS_STATEIMAGEMASK)
 #define ListView_SetExtendedListViewStyleU(w,s)	(DWORD)pSendMessageU((w),LVM_SETEXTENDEDLISTVIEWSTYLE,0,(s))
-#define ListView_SetImageListU(w,h,i)		(HIMAGELIST)(UINT)pSendMessageU((w),LVM_SETIMAGELIST,(i),(LPARAM)(h))
+#define ListView_SetImageListU(w,h,i)		(HIMAGELIST)pSendMessageU((w),LVM_SETIMAGELIST,(i),(LPARAM)(h))
 extern int (WINAPI *pListView_SetItemU)(HWND hWnd, const LVITEMA *pItem);
 
 #define ListView_SetItemStateU(w,i,d,m) \

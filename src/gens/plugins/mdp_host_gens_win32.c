@@ -56,12 +56,12 @@ void mdp_host_win32_check_icon(void *window)
 	// - Window Icon (Small, App Provided) (XP only)
 	
 	// Class Icon. (Big)
-	icon = (HICON)pGetClassLongU(hWnd, GCL_HICON);
+	icon = (HICON)pGetClassLongPtrU(hWnd, GCLP_HICON);
 	if (icon)
 		return;
 	
 	// Class Icon. (Small)
-	icon = (HICON)pGetClassLongU(hWnd, GCL_HICONSM);
+	icon = (HICON)pGetClassLongPtrU(hWnd, GCLP_HICONSM);
 	if (icon)
 		return;
 	

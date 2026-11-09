@@ -9,15 +9,24 @@
 #ifndef __STARCPU_H__
 #define __STARCPU_H__
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Remember to byte-swap these regions. (read STARDOC.TXT for details) */
+/* NOTE: offset is a host pointer minus the 68000 base address.
+ * uintptr_t is 4 bytes on i386 (same layout as the original Starscream
+ * asm expects) and 8 bytes on x86_64 (C core only). */
 struct STARSCREAM_PROGRAMREGION {
 	unsigned lowaddr;
 	unsigned highaddr;
-	unsigned offset;
+	uintptr_t offset;
 };
 
 struct STARSCREAM_DATAREGION {
@@ -105,6 +114,19 @@ struct S68000CONTEXT {
 	STARSCREAM_CONTEXTINFO_EXTRA // Modif N. -- added
 };
 
+/**
+ * releaseCycles(): Consume extra cycles in the current timeslice.
+ * The x86 asm Starscream takes the cycle count in EAX (no C argument);
+ * the C core (Musashi wrapper) takes it as a normal argument.
+ */
+#ifdef GENS_CORE_C
+#define STARSCREAM_RELEASECYCLES_DECL(SN) \
+	void SN##releaseCycles(int cycles);
+#else
+#define STARSCREAM_RELEASECYCLES_DECL(SN) \
+	void SN##releaseCycles(void);
+#endif
+
 #define STARSCREAM_IDENTIFIERS(SNC,SN)			\
 								\
 extern struct SNC##CONTEXT SN##context;				\
@@ -122,7 +144,7 @@ unsigned SN##readOdometer     (void);				\
 unsigned SN##tripOdometer     (void);				\
 unsigned SN##controlOdometer  (int n);				\
 void     SN##releaseTimeslice (void);				\
-void     SN##releaseCycles    (void);				\
+STARSCREAM_RELEASECYCLES_DECL(SN)				\
 void     SN##addCycles        (int cycles);			\
 unsigned SN##readPC           (void);				\
 

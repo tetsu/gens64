@@ -18,8 +18,30 @@ gens_x86_asm_src =
 gens_x86_asm_h =
 endif
 
-ASMFILES = \
-		$(gens_x86_asm_o) \
+# Emulation core: 32-bit x86 asm, or portable C (required for x86_64).
+gens_core_asm_src = \
+		gens_core/nasmhead.inc \
+		gens_core/cpu/sh2/sh2a.asm \
+		gens_core/cpu/sh2/sh2_io.asm \
+		gens_core/mem/mem_m68k.asm \
+		gens_core/mem/mem_m68k_cd.asm \
+		gens_core/mem/mem_m68k_32x.asm \
+		gens_core/mem/mem_s68k.asm \
+		gens_core/mem/mem_sh2.asm \
+		gens_core/misc/misc.asm \
+		gens_core/gfx/gfx_cd.asm
+
+if GENS_CORE_C
+gens_core_asm_o =
+gens_core_c_src = \
+		gens_core/mem/mem_m68k.c \
+		gens_core/cpu/68k/star_68k_c.c \
+		gens_core/core_c_stubs.c \
+		gens_core/core_c_stubs_fn.c
+gens_cpu68k_la = $(top_builddir)/src/musashi/libmusashi.la
+EXTRA_DIST = $(gens_core_asm_src) debugger/mcd_cell_dump.asm
+else
+gens_core_asm_o = \
 		gens_core/gfx/gfx_cd.o \
 		gens_core/mem/mem_m68k.o \
 		gens_core/mem/mem_m68k_cd.o \
@@ -29,6 +51,14 @@ ASMFILES = \
 		gens_core/misc/misc.o \
 		gens_core/cpu/sh2/sh2a.o \
 		gens_core/cpu/sh2/sh2_io.o
+gens_core_c_src =
+gens_cpu68k_la = $(top_builddir)/src/starscream/libstarscream.la
+EXTRA_DIST = gens_core/mem/mem_m68k.c gens_core/cpu/68k/star_68k_c.c gens_core/core_c_stubs.c gens_core/core_c_stubs_fn.c
+endif
+
+ASMFILES = \
+		$(gens_x86_asm_o) \
+		$(gens_core_asm_o)
 
 NASM_INCLUDES = \
 -I@srcdir@/gens_core/ -I@srcdir@/gens_core/io/ -I@srcdir@/gens_core/misc/ \
@@ -38,6 +68,12 @@ NASM_INCLUDES = \
 NASM += $(NASM_INCLUDES)
 INCLUDES = -I@srcdir@/ -I@top_srcdir@/src/ -I@top_srcdir@/src/extlib/ -I@srcdir@/ui/
 gens_CCASFLAGS = $(INCLUDES)
+
+if GENS_CORE_C
+# Musashi internals (used by the Starscream-compatible wrapper).
+INCLUDES += -I@top_srcdir@/src/musashi/ -I@top_builddir@/src/musashi/
+AM_CPPFLAGS += -DMUSASHI_CNF='"m68kconf_gens.h"'
+endif
 
 if GENS_ZLIB_INTERNAL
 INCLUDES += -I@top_srcdir@/src/extlib/zlib/
@@ -53,7 +89,7 @@ endif # GENS_PNG_INTERNAL
 
 # x86 assembly language (using nasm)
 %.o: %.asm
-	mkdir -p gens_core/gfx/ gens_core/io/ gens_core/mem/ gens_core/misc/ ;
+	mkdir -p gens_core/gfx/ gens_core/io/ gens_core/mem/ gens_core/misc/ debugger/ ;
 	mkdir -p gens_core/sound/ gens_core/cpu/sh2/ gens_core/vdp/ gens_core/cpu/z80/ ;
 	$(NASM) $< -o $@
 
@@ -75,29 +111,20 @@ gens_SOURCES = \
 		emulator/g_update.cpp \
 		emulator/parse.cpp \
 		emulator/options.cpp \
-		gens_core/nasmhead.inc \
 		gens_core/cpu/68k/cpu_68k.c \
 		gens_core/cpu/sh2/cpu_sh2.c \
-		gens_core/cpu/sh2/sh2a.asm \
-		gens_core/cpu/sh2/sh2_io.asm \
 		gens_core/cpu/sh2/sh2.c \
 		gens_core/cpu/z80/cpu_z80.c \
 		gens_core/sound/pcm.c \
 		gens_core/sound/psg.c \
 		gens_core/sound/ym2612.cpp \
 		gens_core/sound/pwm.c \
-		gens_core/mem/mem_m68k.asm \
-		gens_core/mem/mem_m68k_cd.asm \
-		gens_core/mem/mem_m68k_32x.asm \
-		gens_core/mem/mem_s68k.asm \
-		gens_core/mem/mem_sh2.asm \
 		gens_core/mem/mem_z80.c \
-		gens_core/misc/misc.asm \
 		gens_core/misc/cpuflags.c \
 		gens_core/misc/print_text.cpp \
 		$(gens_x86_asm_src) \
+		$(gens_core_c_src) \
 		gens_core/gfx/fastblur.cpp \
-		gens_core/gfx/gfx_cd.asm \
 		gens_core/io/io.c \
 		gens_core/io/io_teamplayer.c \
 		gens_core/vdp/vdp_io.cpp \
@@ -171,10 +198,11 @@ gens_SOURCES += \
 		debugger/m68kd.c \
 		debugger/sh2d.c \
 		debugger/z80dis.c \
-		debugger/mcd_cell_dump.asm \
 		debugger/fb_32x.cpp
+if !GENS_CORE_C
 ASMFILES += \
 		debugger/mcd_cell_dump.o
+endif
 endif
 
 if GENS_MP3
@@ -337,7 +365,7 @@ gens_mdp_static = \
 gens_LDADD = \
 		${ASMFILES} \
 		${gens_mdp_static} \
-		$(top_builddir)/src/starscream/libstarscream.la \
+		$(gens_cpu68k_la) \
 		$(top_builddir)/src/mdZ80/libmdZ80.la \
 		$(top_builddir)/src/libgsft/libgsft.la \
 		fw/libgens_fw.la \
@@ -347,6 +375,14 @@ if GENS_MP3
 gens_LDADD += $(top_builddir)/src/extlib/mp3_dec/libmp3_dec.la
 endif 
 
+# NOTE: libpng must come before zlib, since libpng depends on zlib.
+if GENS_PNG
+gens_LDADD += $(top_builddir)/src/libgsft/libgsft_png.la
+if GENS_PNG_INTERNAL
+gens_LDADD += $(top_builddir)/src/extlib/libpng/libpng.la
+endif # GENS_PNG_INTERNAL
+endif # GENS_PNG
+
 if GENS_ZLIB
 gens_LDADD += $(top_builddir)/src/extlib/minizip/libminizip.la
 if GENS_ZLIB_INTERNAL
@@ -355,13 +391,6 @@ else
 gens_LDADD += @ZLIB_LIBS@
 endif # GENS_ZLIB_INTERNAL
 endif # GENS_ZLIB
-
-if GENS_PNG
-gens_LDADD += $(top_builddir)/src/libgsft/libgsft_png.la
-if GENS_PNG_INTERNAL
-gens_LDADD += $(top_builddir)/src/extlib/libpng/libpng.la
-endif # GENS_PNG_INTERNAL
-endif # GENS_PNG
 
 if GENS_LZMA
 gens_LDADD += $(top_builddir)/src/extlib/lzma/liblzma.la
@@ -380,7 +409,7 @@ endif # !GENS_OS_WIN32
 gens_DEPENDENCIES = \
 		${ASMFILES} \
 		${gens_mdp_static} \
-		$(top_builddir)/src/starscream/libstarscream.la \
+		$(gens_cpu68k_la) \
 		$(top_builddir)/src/mdZ80/libmdZ80.la \
 		$(top_builddir)/src/libgsft/libgsft.la \
 		fw/libgens_fw.la

@@ -101,6 +101,15 @@ const char* Detect_Country_SegaCD(void)
  */
 int Init_SegaCD(const char* iso_name)
 {
+#ifdef GENS_CORE_C
+	// TODO: The SegaCD core hasn't been ported from x86 asm to C yet.
+	GensUI::msgBox(
+		"SegaCD emulation is not available in this build yet.\n"
+		"(The SegaCD core is still being ported to the portable C core.)",
+		"Not Supported");
+	return 0;
+#endif
+	
 	const char* BIOS_To_Use;
 	
 	// Clear the sound buffer.
@@ -246,6 +255,15 @@ int Init_SegaCD(const char* iso_name)
  */
 int Reload_SegaCD(const char* iso_name)
 {
+#ifdef GENS_CORE_C
+	// TODO: The SegaCD core hasn't been ported from x86 asm to C yet.
+	GensUI::msgBox(
+		"SegaCD emulation is not available in this build yet.\n"
+		"(The SegaCD core is still being ported to the portable C core.)",
+		"Not Supported");
+	return 0;
+#endif
+	
 	// Clear the sound buffer.
 	audio_clear_sound_buffer();
 	

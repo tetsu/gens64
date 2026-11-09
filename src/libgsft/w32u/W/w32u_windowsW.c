@@ -31,7 +31,7 @@
 /** kernel32.dll **/
 
 
-static WINBASEAPI DWORD WINAPI GetModuleFileNameUW(HMODULE hModule, LPSTR lpFilename, DWORD nSize)
+static DWORD WINAPI GetModuleFileNameUW(HMODULE hModule, LPSTR lpFilename, DWORD nSize)
 {
 	if (!lpFilename || nSize == 0)
 	{
@@ -55,7 +55,7 @@ static WINBASEAPI DWORD WINAPI GetModuleFileNameUW(HMODULE hModule, LPSTR lpFile
 }
 
 
-static WINBASEAPI HMODULE WINAPI GetModuleHandleUW(LPCSTR lpModuleName)
+static HMODULE WINAPI GetModuleHandleUW(LPCSTR lpModuleName)
 {
 	if (!lpModuleName)
 	{
@@ -72,7 +72,7 @@ static WINBASEAPI HMODULE WINAPI GetModuleHandleUW(LPCSTR lpModuleName)
 }
 
 
-static WINBASEAPI UINT WINAPI GetSystemDirectoryUW(LPSTR lpBuffer, UINT uSize)
+static UINT WINAPI GetSystemDirectoryUW(LPSTR lpBuffer, UINT uSize)
 {
 	if (!lpBuffer || uSize == 0)
 	{
@@ -96,7 +96,7 @@ static WINBASEAPI UINT WINAPI GetSystemDirectoryUW(LPSTR lpBuffer, UINT uSize)
 }
 
 
-static WINUSERAPI BOOL WINAPI SetCurrentDirectoryUW(LPCSTR lpPathName)
+static BOOL WINAPI SetCurrentDirectoryUW(LPCSTR lpPathName)
 {
 	if (!lpPathName)
 	{
@@ -113,7 +113,7 @@ static WINUSERAPI BOOL WINAPI SetCurrentDirectoryUW(LPCSTR lpPathName)
 }
 
 
-static WINBASEAPI BOOL WINAPI GetVersionExUW(LPOSVERSIONINFOA lpVersionInfo)
+static BOOL WINAPI GetVersionExUW(LPOSVERSIONINFOA lpVersionInfo)
 {
 	// Get the version information.
 	OSVERSIONINFOEXW wVersionInfo;
@@ -150,7 +150,7 @@ static WINBASEAPI BOOL WINAPI GetVersionExUW(LPOSVERSIONINFOA lpVersionInfo)
 }
 
 
-static WINBASEAPI HINSTANCE WINAPI LoadLibraryUW(LPCSTR lpFileName)
+static HINSTANCE WINAPI LoadLibraryUW(LPCSTR lpFileName)
 {
 	if (!lpFileName)
 	{
@@ -169,7 +169,7 @@ static WINBASEAPI HINSTANCE WINAPI LoadLibraryUW(LPCSTR lpFileName)
 /** user32.dll **/
 
 
-static WINUSERAPI ATOM WINAPI RegisterClassUW(const WNDCLASSA* lpWndClass)
+static ATOM WINAPI RegisterClassUW(const WNDCLASSA* lpWndClass)
 {
 	// Convert lpWndClass from WNDCLASSA to WNDCLASSW.
 	WNDCLASSW wWndClass;
@@ -197,7 +197,7 @@ static WINUSERAPI ATOM WINAPI RegisterClassUW(const WNDCLASSA* lpWndClass)
 }
 
 
-static WINUSERAPI HWND WINAPI CreateWindowExUW(
+static HWND WINAPI CreateWindowExUW(
 			DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName,
 			DWORD dwStyle, int x, int y, int nWidth, int nHeight,
 			HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
@@ -221,7 +221,7 @@ static WINUSERAPI HWND WINAPI CreateWindowExUW(
 }
 
 
-static WINUSERAPI BOOL WINAPI SetWindowTextUW(HWND hWnd, LPCSTR lpString)
+static BOOL WINAPI SetWindowTextUW(HWND hWnd, LPCSTR lpString)
 {
 	// Convert lpString from UTF-8 to UTF-16.
 	wchar_t *lpwString = NULL;
@@ -235,7 +235,7 @@ static WINUSERAPI BOOL WINAPI SetWindowTextUW(HWND hWnd, LPCSTR lpString)
 }
 
 
-static WINUSERAPI int WINAPI GetWindowTextUW(HWND hWnd, LPSTR lpString, int nMaxCount)
+static int WINAPI GetWindowTextUW(HWND hWnd, LPSTR lpString, int nMaxCount)
 {
 	if (!lpString || nMaxCount <= 0)
 	{
@@ -256,7 +256,7 @@ static WINUSERAPI int WINAPI GetWindowTextUW(HWND hWnd, LPSTR lpString, int nMax
 }
 
 
-static WINUSERAPI BOOL WINAPI InsertMenuUW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem)
+static BOOL WINAPI InsertMenuUW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem)
 {
 	if ((uFlags & (MF_BITMAP | MF_OWNERDRAW)) || !lpNewItem)
 	{
@@ -276,7 +276,7 @@ static WINUSERAPI BOOL WINAPI InsertMenuUW(HMENU hMenu, UINT uPosition, UINT uFl
 }
 
 
-static WINUSERAPI BOOL WINAPI ModifyMenuUW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem)
+static BOOL WINAPI ModifyMenuUW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCSTR lpNewItem)
 {
 	if ((uFlags & (MF_BITMAP | MF_OWNERDRAW)) || !lpNewItem)
 	{
@@ -296,7 +296,7 @@ static WINUSERAPI BOOL WINAPI ModifyMenuUW(HMENU hMenu, UINT uPosition, UINT uFl
 }
 
 
-static WINUSERAPI int WINAPI DrawTextUW(HDC hDC, LPCSTR lpchText, int nCount, LPRECT lpRect, UINT uFormat)
+static int WINAPI DrawTextUW(HDC hDC, LPCSTR lpchText, int nCount, LPRECT lpRect, UINT uFormat)
 {
 	if (!lpchText)
 	{
@@ -315,7 +315,7 @@ static WINUSERAPI int WINAPI DrawTextUW(HDC hDC, LPCSTR lpchText, int nCount, LP
 /** gdi32.dll **/
 
 
-static WINGDIAPI BOOL WINAPI GetTextExtentPoint32UW(HDC hDC, LPCSTR lpString, int c, LPSIZE lpSize)
+static BOOL WINAPI GetTextExtentPoint32UW(HDC hDC, LPCSTR lpString, int c, LPSIZE lpSize)
 {
 	if (!lpString)
 	{
@@ -332,7 +332,7 @@ static WINGDIAPI BOOL WINAPI GetTextExtentPoint32UW(HDC hDC, LPCSTR lpString, in
 
 
 #define LOADRESOURCE_FNW(fnUW, fnWin32, type_ret) \
-static WINUSERAPI type_ret WINAPI fnUW(HINSTANCE hInstance, LPCSTR lpResName) \
+static type_ret WINAPI fnUW(HINSTANCE hInstance, LPCSTR lpResName) \
 { \
 	if ((DWORD_PTR)lpResName < 0x10000) \
 		return fnWin32(hInstance, (LPCWSTR)lpResName); \
@@ -348,7 +348,7 @@ LOADRESOURCE_FNW(LoadCursorUW,		LoadCursorW,		HCURSOR);
 LOADRESOURCE_FNW(LoadIconUW,		LoadIconW,		HICON);
 
 
-static WINUSERAPI HANDLE WINAPI LoadImageUW(HINSTANCE hInst, LPCSTR lpszName, UINT uType,
+static HANDLE WINAPI LoadImageUW(HINSTANCE hInst, LPCSTR lpszName, UINT uType,
 						int cxDesired, int cyDesired, UINT fuLoad)
 {
 	if ((DWORD_PTR)lpszName < 0x10000)
@@ -365,7 +365,7 @@ static WINUSERAPI HANDLE WINAPI LoadImageUW(HINSTANCE hInst, LPCSTR lpszName, UI
 }
 
 
-static WINUSERAPI int WINAPI MessageBoxUW(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
+static int WINAPI MessageBoxUW(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
 {
 	// Convert lpText and lpCaption from UTF-8 to UTF-16.
 	wchar_t *lpwText = NULL, *lpwCaption = NULL;
@@ -391,7 +391,7 @@ static WINUSERAPI int WINAPI MessageBoxUW(HWND hWnd, LPCSTR lpText, LPCSTR lpCap
  * @param lParam lParam. (LPCSTR)
  * @return Result.
  */
-static WINUSERAPI LRESULT WINAPI SendMessageUW_LPCSTR(HWND hWnd, UINT msgA, UINT msgW, WPARAM wParam, LPARAM lParam)
+static LRESULT WINAPI SendMessageUW_LPCSTR(HWND hWnd, UINT msgA, UINT msgW, WPARAM wParam, LPARAM lParam)
 {
 	GSFT_UNUSED_PARAMETER(msgA);
 	

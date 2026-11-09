@@ -655,7 +655,7 @@ void GensUI::setMousePointer(bool busy)
 	SetCursor(cursor);
 	
 	// Set the cursor for the Gens window.
-	pSetClassLongPtrU(gens_window, GCL_HCURSOR, (LONG_PTR)cursor);
+	pSetClassLongPtrU(gens_window, GCLP_HCURSOR, (LONG_PTR)cursor);
 }
 
 

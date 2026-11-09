@@ -2253,7 +2253,7 @@ int YM2612_Save_Full(gsx_v7_ym2612 *save)
 			slotGSX->EincR		= cpu_to_le32(slotYM->EincR);
 			
 			// NOTE: This seems to be unused...
-			slotGSX->OUTp		= cpu_to_le32((int)(slotYM->OUTp));
+			slotGSX->OUTp		= cpu_to_le32((int)(intptr_t)(slotYM->OUTp));
 			
 			slotGSX->INd		= cpu_to_le32(slotYM->INd);
 			slotGSX->ChgEnM		= cpu_to_le32(slotYM->ChgEnM);
@@ -2388,7 +2388,7 @@ int YM2612_Restore_Full(gsx_v7_ym2612 *save)
 			slotYM->EincR		= le32_to_cpu(slotGSX->EincR);
 			
 			// NOTE: This seems to be unused...
-			slotYM->OUTp		= (int*)(le32_to_cpu((int)(slotGSX->OUTp)));
+			// OUTp is a host pointer (unused); do not restore it from the savestate.
 			
 			slotYM->INd		= le32_to_cpu(slotGSX->INd);
 			slotYM->ChgEnM		= le32_to_cpu(slotGSX->ChgEnM);

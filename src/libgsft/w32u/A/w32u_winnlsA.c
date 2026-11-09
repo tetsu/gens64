@@ -34,7 +34,7 @@ static HMODULE hKernel32 = NULL;
 MAKE_STFUNCPTR(GetCPInfoExA);
 
 
-static WINBASEAPI BOOL WINAPI GetCPInfoExUA(UINT CodePage, DWORD dwFlags, LPCPINFOEXA lpCPInfoEx)
+static BOOL WINAPI GetCPInfoExUA(UINT CodePage, DWORD dwFlags, LPCPINFOEXA lpCPInfoEx)
 {
 	if (!lpCPInfoEx)
 	{
@@ -52,7 +52,7 @@ static WINBASEAPI BOOL WINAPI GetCPInfoExUA(UINT CodePage, DWORD dwFlags, LPCPIN
 }
 
 
-static WINBASEAPI BOOL WINAPI GetCPInfoExUA_EMULATE(UINT CodePage, DWORD dwFlags, LPCPINFOEXA lpCPInfoEx)
+static BOOL WINAPI GetCPInfoExUA_EMULATE(UINT CodePage, DWORD dwFlags, LPCPINFOEXA lpCPInfoEx)
 {
 	// Emulate GetCPInfoExUA() on platforms that don't have GetCPInfoExA().
 	// This can be done by using GetCPInfo(), then filling in the other fields.

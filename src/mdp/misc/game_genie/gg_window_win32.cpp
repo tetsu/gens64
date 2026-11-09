@@ -212,7 +212,7 @@ static void gg_window_create_child_windows(HWND hWnd)
 	SetWindowFontU(txtCode, w32_fntMessage, true);
 	Edit_LimitTextU(txtCode, 17);
 	txtCode_old_wndproc = (WNDPROC)pSetWindowLongPtrU(
-						txtCode, GWL_WNDPROC,
+						txtCode, GWLP_WNDPROC,
 						(LONG_PTR)gg_window_wndproc_textbox);
 	
 	// "Name" label.
@@ -231,7 +231,7 @@ static void gg_window_create_child_windows(HWND hWnd)
 					hWnd, NULL, gg_hInstance, NULL);
 	SetWindowFontU(txtName, w32_fntMessage, true);
 	txtName_old_wndproc = (WNDPROC)pSetWindowLongPtrU(
-						txtName, GWL_WNDPROC,
+						txtName, GWLP_WNDPROC,
 						(LONG_PTR)gg_window_wndproc_textbox);
 	
 	// "Add Code" button.

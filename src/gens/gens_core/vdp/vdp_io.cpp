@@ -236,7 +236,11 @@ void VDP_Update_IRQ_Line(void)
 	}
 	
 	// No VDP interrupts.
+#ifdef GENS_CORE_C
+	main68k_interrupt(0, -1);
+#else
 	main68k_context.interrupts[0] &= 0xF0;
+#endif
 }
 
 
@@ -1287,8 +1291,14 @@ static inline void T_DMA_Loop(unsigned int src_address, unsigned int dest_addres
 	VDP_Reg.DMA_Address &= 0x7FFFFF;
 	
 	// Update DMA.
+#ifdef GENS_CORE_C
+	main68k_releaseCycles(VDP_Update_DMA());
+#else
+	// x86 asm Starscream: releaseCycles() takes the cycle count
+	// from EAX, i.e. VDP_Update_DMA()'s return value.
 	VDP_Update_DMA();
 	main68k_releaseCycles();
+#endif
 }
 
 

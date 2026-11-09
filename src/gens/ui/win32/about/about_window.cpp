@@ -280,7 +280,7 @@ static void WINAPI about_window_create_child_windows(HWND hWnd)
 	SetWindowFontU(grpTabContents, w32_fntMessage, true);
 	
 	// Subclass the tab box.
-	grpTabContents_old_wndproc = (WNDPROC)pSetWindowLongPtrU(grpTabContents, GWL_WNDPROC,
+	grpTabContents_old_wndproc = (WNDPROC)pSetWindowLongPtrU(grpTabContents, GWLP_WNDPROC,
 						(LONG_PTR)about_window_grpTabContents_wndproc);
 	
 	// Tab contents.

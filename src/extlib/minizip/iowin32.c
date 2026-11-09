@@ -70,7 +70,7 @@ typedef struct
 #include <stdlib.h>
 #include <string.h>
 
-static WINBASEAPI HANDLE WINAPI CreateFileU_int(
+static HANDLE WINAPI CreateFileU_int(
 		LPCSTR lpFileName,
 		DWORD dwDesiredAccess,
 		DWORD dwShareMode,

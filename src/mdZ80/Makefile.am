@@ -16,14 +16,31 @@ libmdZ80_la_CFLAGS	= $(AM_CFLAGS) -static
 libmdZ80_la_LDFLAGS	= $(AM_LDFLAGS) -static
 
 libmdZ80_la_SOURCES = \
-		mdZ80_x86.asm \
 		mdZ80.c \
 		mdZ80_DAA.c \
 		mdZ80_INC_DEC.c
+
+if GENS_CORE_C
+# Portable C core.
+libmdZ80_la_SOURCES += \
+		mdZ80_c.c \
+		z80core.c
+EXTRA_DIST = mdZ80_x86.asm
+else
+# x86 asm core.
+libmdZ80_la_SOURCES += \
+		mdZ80_x86.asm
+EXTRA_DIST = mdZ80_c.c z80core.c
+endif
+
+EXTRA_DIST += \
+		z80core_LICENSE.txt \
+		z80core_UPSTREAM_COMMIT.txt
 
 noinst_HEADERS = \
 		mdZ80.h \
 		mdZ80_flags.h \
 		mdZ80_opcodes.h \
 		mdZ80_DAA.h \
-		mdZ80_INC_DEC.h
+		mdZ80_INC_DEC.h \
+		z80core.h

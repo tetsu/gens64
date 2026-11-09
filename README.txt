@@ -3,8 +3,10 @@ Gens/GS r7
 Copyright (c) 1999-2002 by Stéphane Dallongeville
 Copyright (c) 2003-2004 by Stéphane Akhoun
 Copyright (c) 2008-2009 by David Korth
+Copyright (c) 2026 by Tetsuro Mori (64-bit port)
 
 This version of Gens is maintained by David Korth.
+The 64-bit (x86_64) port was done by Tetsuro Mori. See section 1.1.
 E-mail: gerbilsoft@verizon.net
 
 For news on Gens/GS, visit Sonic Retro:
@@ -18,6 +20,59 @@ Gens/GS r7 is David Korth's fork of Gens, initially based on
 Gens for Linux v2.15.2. The number after the "r" indicates the
 Gens/GS release. Releases are usually made after a significant new
 feature has been added, with minor releases if a major bug is found.
+
+----------------------------------------------------------------
+
+1.1. 64-bit (x86_64) port
+
+Port by Tetsuro Mori (2026).
+
+The original Gens core is written in 32-bit x86 assembly, so it could
+not be built as a 64-bit program. This port replaces the assembly
+parts that the Mega Drive / Genesis needs with C, so that Gens/GS
+builds and runs as a native 64-bit Windows program (x86_64).
+
+Changes:
+- New configure option "--enable-core-c" (GENS_CORE_C). It is always
+  on for x86_64 builds. 32-bit builds keep the original assembly core
+  unless the option is given.
+- 68000: the Starscream assembly core is replaced by Musashi (C).
+  src/gens/gens_core/cpu/68k/star_68k_c.c keeps the Starscream API
+  (main68k_*), so the rest of Gens is unchanged.
+- Z80: the mdZ80 assembly core is replaced by a C Z80 core
+  (src/mdZ80/z80core.c). src/mdZ80/mdZ80_c.c keeps the mdZ80 API.
+- Genesis memory map: mem_m68k.asm is ported to C
+  (src/gens/gens_core/mem/mem_m68k.c).
+- 64-bit cleanup: pointer/integer casts, Win32 API calls that store
+  pointers (GWLP_WNDPROC, GCLP_HICON, GCLP_HCURSOR), a truncated image
+  list handle, a raw pointer saved in YM2612 savestates, and the
+  manifest's processorArchitecture (was x86, now "*").
+- Build fixes for current MinGW-w64 / GCC / autotools (dllimport on
+  static functions in w32u, missing headers, a Makefile.am typo,
+  libtool RC tag, libpng/zlib link order).
+
+Current limitations:
+- Sega CD and 32X are not ported yet in the 64-bit build. Their code
+  is replaced by placeholders (src/gens/gens_core/core_c_stubs*.c)
+  and loading such a game shows a "not available" message.
+- Tested with a small self-made test ROM (68000, VDP interrupts, Z80
+  and Z80 interrupts). Commercial games, sound, input and savestate
+  compatibility with older builds have not been fully tested yet.
+
+Building the 64-bit version (MSYS2, MINGW64 shell):
+
+  autoreconf -fi
+  mkdir build64 && cd build64
+  ../configure --disable-debug --without-7z
+  make -j8
+
+The program is built as build64/src/gens/.libs/gens.exe. It needs
+libwinpthread-1.dll and libz-1.dll from the MSYS2 mingw64/bin folder.
+
+Third-party code added by this port (both MIT license):
+- Musashi 68000 core, Copyright Karl Stenerud (src/musashi/)
+- z80 core, Copyright (c) 2019 Nicolas Allemand (src/mdZ80/z80core.c,
+  license in src/mdZ80/z80core_LICENSE.txt)
 
 ================================================================
 

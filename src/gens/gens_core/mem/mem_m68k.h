@@ -45,10 +45,24 @@ extern unsigned char SRAM[64 * 1024];
 extern unsigned char Ram_Backup_Ex[512 * 1024];	// Sega CD
 extern unsigned char Genesis_Rom[2 * 1024];
 
-extern unsigned int M68K_Read_Byte_Table[0x20];
-extern unsigned int M68K_Read_Word_Table[0x20];
-extern unsigned int M68K_Write_Byte_Table[0x10];
-extern unsigned int M68K_Write_Word_Table[0x10];
+/**
+ * Main 68000 memory handler function types.
+ * NOTE: In the x86 asm core, the tables contain pointers to asm handlers
+ * that use a custom register-based calling convention; C code must only
+ * copy table entries, never call them. In the C core, the handlers are
+ * ordinary C functions that take a 24-bit address.
+ */
+typedef uint8_t  (*M68K_Read_Byte_fn)(uint32_t address);
+typedef uint16_t (*M68K_Read_Word_fn)(uint32_t address);
+typedef void     (*M68K_Write_Byte_fn)(uint32_t address, uint8_t data);
+typedef void     (*M68K_Write_Word_fn)(uint32_t address, uint16_t data);
+
+/** Read tables: indexed by (address >> 19) & 0x1F (512 KB pages). **/
+extern M68K_Read_Byte_fn M68K_Read_Byte_Table[0x20];
+extern M68K_Read_Word_fn M68K_Read_Word_Table[0x20];
+/** Write tables: indexed by (address >> 20) & 0x0F (1 MB pages). **/
+extern M68K_Write_Byte_fn M68K_Write_Byte_Table[0x10];
+extern M68K_Write_Word_fn M68K_Write_Word_Table[0x10];
 
 extern unsigned int Rom_Size;
 

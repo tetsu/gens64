@@ -68,6 +68,15 @@ do {					\
  */
 int Init_32X(ROM_t* MD_ROM)
 {
+#ifdef GENS_CORE_C
+	// TODO: The 32X core hasn't been ported from x86 asm to C yet.
+	GensUI::msgBox(
+		"32X emulation is not available in this build yet.\n"
+		"(The 32X core is still being ported to the portable C core.)",
+		"Not Supported");
+	return 0;
+#endif
+	
 	FILE *f;
 	int i;
 	

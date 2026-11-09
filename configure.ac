@@ -19,6 +19,11 @@ AC_CANONICAL_TARGET
 # Initialize automake.
 AM_INIT_AUTOMAKE([1.10])
 
+# GTK+/SDL macros are optional (checked with ifdef below).
+# Newer autoconf rejects unexpanded AM_* names unless allowed.
+m4_pattern_allow([^AM_PATH_GTK_2_0$])
+m4_pattern_allow([^AM_PATH_SDL$])
+
 # Disable the Fortran check.
 m4_defun([_LT_AC_LANG_F77_CONFIG], [:])
 
@@ -35,6 +40,8 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_MKDIR_P
 AC_PROG_LIBTOOL
+# Windows resources are compiled through libtool (--tag=RC).
+LT_LANG([Windows Resource])
 
 # Enable C99.
 AC_PROG_CC_C99
@@ -51,6 +58,7 @@ if test "$CCASFLAGS" = "-g -O2"; then
 fi
 
 # Check operating system.
+cpu_64bit=no
 nasm_debug=""
 yasm_debug=""
 case $host in
@@ -128,9 +136,41 @@ case $host in
 		cflags_debug="-ggdb"
 		cflags_optimization="-march=i586 -mtune=i686"
 		;;
-	x86_64*)
+	x86_64*mingw32*)
+		# 64-bit Windows. Requires the portable C core.
+		os=win32;
+		obj_format=win64;
+		cpu_64bit=yes;
+		AC_DEFINE(GENS_OS_WIN32, 1, Win32 operating system)
+		AC_DEFINE(GENS_PLATFORM, "Win64", Platform ID)
+		cflags_platform="${cflags_platform}"
+		ldflags_platform="-static-libgcc -static-libstdc++ ${ldflags_platform}"
+		nasm_debug="-g"
+		yasm_debug="-g cv8";
+		cflags_debug="-g"
+		cflags_optimization=""
+		;;
+	x86_64*linux*)
+		# 64-bit Linux. Requires the portable C core.
+		os=linux;
 		obj_format=elf64;
-		AC_MSG_ERROR([64-bit is currently not supported.]);
+		cpu_64bit=yes;
+		AC_DEFINE(GENS_OS_LINUX, 1, Linux operating system)
+		AC_DEFINE(GENS_OS_UNIX, 1, Unix operating system)
+		AC_DEFINE(GENS_PLATFORM, "Linux", Platform ID)
+		cflags_platform=""
+		ldflags_platform=""
+		nasm_debug="-g -F dwarf";
+		yasm_debug="-g dwarf2";
+		cflags_debug="-ggdb"
+		cflags_optimization=""
+		;;
+	x86_64*)
+		os=unix;
+		obj_format=elf64;
+		cpu_64bit=yes;
+		AC_DEFINE(GENS_OS_UNIX, 1, Unix operating system)
+		AC_DEFINE(GENS_PLATFORM, "Unix", Platform ID)
 		cflags_platform=""
 		ldflags_platform=""
 		nasm_debug="-g -F dwarf";
@@ -310,6 +350,34 @@ AM_CONDITIONAL([HAVE_LIBX11], [test x$has_libX11 = xyes])
 AC_SUBST(X11_CFLAGS)
 AC_SUBST(X11_LIBS)
 
+# Emulation core: x86 asm (32-bit only) or portable C.
+AC_ARG_ENABLE(core_c, AC_HELP_STRING([--enable-core-c], [Use the portable C emulation core instead of the x86 asm core [[default=no on i386, yes on x86_64]]]), enable_core_c=$enableval, enable_core_c=$cpu_64bit)
+if test x$cpu_64bit = xyes; then
+	if test x$enable_core_c != xyes; then
+		AC_MSG_WARN([The x86 asm core is 32-bit only; using the portable C core.])
+	fi
+	enable_core_c=yes
+fi
+if test x$enable_core_c = xyes; then
+	AC_DEFINE(GENS_CORE_C, 1, Use the portable C emulation core)
+fi
+AM_CONDITIONAL([GENS_CORE_C], [test x$enable_core_c = xyes])
+
+# Build-machine C compiler (for code generators such as Musashi's m68kmake).
+if test x$cross_compiling = xyes; then
+	CC_FOR_BUILD=${CC_FOR_BUILD-gcc}
+else
+	CC_FOR_BUILD=${CC_FOR_BUILD-$CC}
+fi
+AC_SUBST(CC_FOR_BUILD)
+
+AC_ARG_ENABLE(x86_asm, AC_HELP_STRING([--enable-x86-asm], [Enable x86 assembly optimizations [[default=yes]]]), enable_x86_asm=$enableval, enable_x86_asm=yes)
+if test x$cpu_64bit = xyes -a x$enable_x86_asm = xyes; then
+	AC_MSG_WARN([x86 assembly optimizations are 32-bit only. Disabling.])
+	enable_x86_asm=no
+fi
+
+if test x$enable_core_c = xno -o x$enable_x86_asm = xyes; then
 # Check for nasm.
 AC_ARG_WITH(nasm, AC_HELP_STRING([--with-nasm[[=nasm]]], [Select nasm or yasm [[default=nasm]]]), with_nasm=$withval, with_nasm=nasm)
 
@@ -362,8 +430,11 @@ elif test x$with_nasm = xnasm; then
 	# Set the NASM path to NASM.
 	NASM="${NASM} -O${enable_nasm_opt} ${nasm_obj_format} ${nasm_debug} -I\$(top_srcdir)/src/ -w-orphan-labels"
 fi
+else
+	NASM="false"
+fi # nasm needed
+AC_SUBST(NASM)
 
-AC_ARG_ENABLE(x86_asm, AC_HELP_STRING([--enable-x86-asm], [Enable x86 assembly optimizations [[default=yes]]]), enable_x86_asm=$enableval, enable_x86_asm=yes)
 if test x$enable_x86_asm = xyes; then
 	AC_DEFINE(GENS_X86_ASM, 1, Enable x86 assembly optimizations)
 fi
@@ -593,7 +664,7 @@ AM_CONDITIONAL([GENS_LZMA], [test x$with_7z = xyes])
 
 AC_MSG_CHECKING(for gcc -fvisibility-inlines-hidden support)
 
-if test x$obj_format = xwin32; then
+if test x$os = xwin32; then
 	# Symbol visibility isn't applicable on Win32.
 	AC_MSG_RESULT(not applicable on Win32)
 else
@@ -817,6 +888,11 @@ if test x$GCC = xyes; then
 	fi
 fi
 
+# gcc-14+ turns some old C constructs into errors.
+# Keep incompatible function pointer assignments as warnings.
+# (int-conversion stays an error: it catches pointer truncation on 64-bit.)
+GSFT_CFLAGS_GCC_OPTION([-Wno-error=incompatible-pointer-types], AM_CFLAGS)
+
 # Stack-smashing protection. (Not supported on MinGW.)
 if test x$os != xwin32; then
 	AM_CFLAGS="$AM_CFLAGS -D_FORTIFY_SOURCE=2"
@@ -990,6 +1066,7 @@ AC_CONFIG_FILES([
 	src/extlib/mp3_dec/Makefile
 	src/extlib/zlib/Makefile
 	src/starscream/Makefile
+	src/musashi/Makefile
 	src/mdZ80/Makefile
 	src/libgsft/Makefile
 	src/libgsft/w32u/Makefile

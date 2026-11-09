@@ -23,9 +23,16 @@
 #ifndef GENS_MEM_M68K_CD_H
 #define GENS_MEM_M68K_CD_H
 
+#include "mem_m68k.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern const M68K_Read_Byte_fn SegaCD_M68K_Read_Byte_Table[0x20];
+extern const M68K_Read_Word_fn SegaCD_M68K_Read_Word_Table[0x20];
+extern const M68K_Write_Byte_fn SegaCD_M68K_Write_Byte_Table[0x10];
+extern const M68K_Write_Word_fn SegaCD_M68K_Write_Word_Table[0x10];
 
 extern int BRAM_Ex_State;
 extern int BRAM_Ex_Size;

@@ -74,6 +74,10 @@ void mdZ80_reset(Z80_CONTEXT *z80)
 	// Restore the Z80 Cycle Count.
 	z80->CycleCnt = cycleCnt;
 	
+#ifdef GENS_CORE_C
+	mdZ80_c_reset_core();
+#endif
+
 	// Initialize the program counter.
 	mdZ80_set_PC(z80, 0);
 	
@@ -109,11 +113,17 @@ void mdZ80_set_PC(Z80_CONTEXT *z80, unsigned int PC)
 	if (z80->Status & Z80_STATE_RUNNING)
 		return;
 	
-	// TODO: 32-bit specific code will break on 64-bit!
 	PC &= 0xFFFF;
+#ifdef GENS_CORE_C
+	// C core: PC is stored directly.
+	z80->BasePC = 0;
+	z80->PC.d = PC;
+#else
+	// x86 asm core: PC is a host pointer. (32-bit only.)
 	unsigned int newPC = (unsigned int)(z80->Fetch[PC >> 8]);
 	z80->BasePC = newPC;
 	z80->PC.d = newPC + PC;
+#endif
 }
 
 
