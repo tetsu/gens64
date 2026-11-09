@@ -1,10 +1,10 @@
 /***************************************************************************
- * Gens: Placeholder definitions for the SegaCD / 32X cores (C core).      *
+ * Gens: Placeholder definitions for the 32X core (C core).                *
  *                                                                         *
- * The SegaCD and 32X emulation code is still 32-bit x86 asm and hasn't    *
- * been ported to C yet. These placeholders let the Genesis-only C core    *
- * (e.g. x86_64 builds) link. SegaCD and 32X games are refused at load     *
- * time while GENS_CORE_C_NO_SEGACD_32X is defined (see core_c_stubs.h).   *
+ * The 32X emulation code (SH2 core, 32X memory maps) is still 32-bit x86  *
+ * asm and hasn't been ported to C yet. These placeholders let the C core  *
+ * (e.g. x86_64 builds) link. 32X games are refused at load time           *
+ * (see Init_32X() in emulator/g_32x.cpp).                                 *
  *                                                                         *
  * Generated from the linker's undefined symbol list. Remove entries as   *
  * the corresponding asm files are ported to C.                            *
@@ -19,22 +19,12 @@ void core_c_stub_called(const char *name);
 	void name(void); \
 	void name(void) { core_c_stub_called(#name); }
 
-STUB(CDD_Export_Status)
-STUB(Cell_16x16_Dump)
-STUB(Cell_32x32_Dump)
-STUB(Cell_8x16_Dump)
-STUB(Cell_8x8_Dump)
-STUB(Init_RS_GFX)
 STUB(MSH2_Read_Byte_00)
 STUB(MSH2_Read_Long_00)
 STUB(MSH2_Read_Word_00)
 STUB(MSH2_Write_Byte_00)
 STUB(MSH2_Write_Long_00)
 STUB(MSH2_Write_Word_00)
-STUB(S68K_RB)
-STUB(S68K_RW)
-STUB(S68K_WB)
-STUB(S68K_WW)
 STUB(SH2I_ADD)
 STUB(SH2I_ADDC)
 STUB(SH2I_ADDC_DS)
@@ -366,4 +356,3 @@ STUB(SSH2_Read_Word_00)
 STUB(SSH2_Write_Byte_00)
 STUB(SSH2_Write_Long_00)
 STUB(SSH2_Write_Word_00)
-STUB(Update_SegaCD_Timer)

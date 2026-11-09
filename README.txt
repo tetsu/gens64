@@ -28,8 +28,9 @@ Port by Tetsuro Mori (2026).
 
 The original Gens core is written in 32-bit x86 assembly, so it could
 not be built as a 64-bit program. This port replaces the assembly
-parts that the Mega Drive / Genesis needs with C, so that Gens/GS
-builds and runs as a native 64-bit Windows program (x86_64).
+parts that the Mega Drive / Genesis and the Sega CD need with C, so
+that Gens/GS builds and runs as a native 64-bit Windows program
+(x86_64).
 
 Changes:
 - New configure option "--enable-core-c" (GENS_CORE_C). It is always
@@ -42,6 +43,11 @@ Changes:
   (src/mdZ80/z80core.c). src/mdZ80/mdZ80_c.c keeps the mdZ80 API.
 - Genesis memory map: mem_m68k.asm is ported to C
   (src/gens/gens_core/mem/mem_m68k.c).
+- Sega CD: the main 68000 memory map (mem_m68k_cd.c), the sub 68000
+  memory map (mem_s68k.c), the graphics ASIC (gfx/gfx_cd.c), the CDD
+  status export (misc/misc.c) and the debugger cell viewer
+  (debugger/mcd_cell_dump.c) are ported to C. The ASIC's saved
+  addresses are now offsets instead of raw pointers.
 - 64-bit cleanup: pointer/integer casts, Win32 API calls that store
   pointers (GWLP_WNDPROC, GCLP_HICON, GCLP_HCURSOR), a truncated image
   list handle, a raw pointer saved in YM2612 savestates, and the
@@ -51,12 +57,18 @@ Changes:
   libtool RC tag, libpng/zlib link order).
 
 Current limitations:
-- Sega CD and 32X are not ported yet in the 64-bit build. Their code
-  is replaced by placeholders (src/gens/gens_core/core_c_stubs*.c)
-  and loading such a game shows a "not available" message.
-- Tested with a small self-made test ROM (68000, VDP interrupts, Z80
-  and Z80 interrupts). Commercial games, sound, input and savestate
-  compatibility with older builds have not been fully tested yet.
+- 32X is not ported yet in the 64-bit build. Its code is replaced by
+  placeholders (src/gens/gens_core/core_c_stubs*.c) and loading a 32X
+  game shows a "not available" message.
+- Tested with small self-made test programs:
+  - Genesis: 68000, VDP interrupts, Z80 and Z80 interrupts.
+  - Sega CD: sub CPU start-up, COMM registers, Program RAM write
+    protect, font registers, timer/INT2/graphics interrupts, Word RAM
+    2M/1M modes, the graphics ASIC in 7 modes, Backup RAM and PCM RAM.
+    The 64-bit C build gives exactly the same results as the original
+    32-bit assembly build.
+  Commercial games, CD audio, sound, input and savestate compatibility
+  with older builds have not been fully tested yet.
 
 Building the 64-bit version (MSYS2, MINGW64 shell):
 

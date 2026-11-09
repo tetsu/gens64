@@ -35,6 +35,10 @@ if GENS_CORE_C
 gens_core_asm_o =
 gens_core_c_src = \
 		gens_core/mem/mem_m68k.c \
+		gens_core/mem/mem_m68k_cd.c \
+		gens_core/mem/mem_s68k.c \
+		gens_core/gfx/gfx_cd.c \
+		gens_core/misc/misc.c \
 		gens_core/cpu/68k/star_68k_c.c \
 		gens_core/core_c_stubs.c \
 		gens_core/core_c_stubs_fn.c
@@ -53,7 +57,7 @@ gens_core_asm_o = \
 		gens_core/cpu/sh2/sh2_io.o
 gens_core_c_src =
 gens_cpu68k_la = $(top_builddir)/src/starscream/libstarscream.la
-EXTRA_DIST = gens_core/mem/mem_m68k.c gens_core/cpu/68k/star_68k_c.c gens_core/core_c_stubs.c gens_core/core_c_stubs_fn.c
+EXTRA_DIST = gens_core/mem/mem_m68k.c gens_core/mem/mem_m68k_cd.c gens_core/mem/mem_s68k.c gens_core/gfx/gfx_cd.c gens_core/misc/misc.c gens_core/cpu/68k/star_68k_c.c gens_core/core_c_stubs.c gens_core/core_c_stubs_fn.c
 endif
 
 ASMFILES = \
@@ -199,7 +203,10 @@ gens_SOURCES += \
 		debugger/sh2d.c \
 		debugger/z80dis.c \
 		debugger/fb_32x.cpp
-if !GENS_CORE_C
+if GENS_CORE_C
+gens_SOURCES += \
+		debugger/mcd_cell_dump.c
+else
 ASMFILES += \
 		debugger/mcd_cell_dump.o
 endif
