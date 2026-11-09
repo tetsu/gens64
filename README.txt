@@ -27,9 +27,9 @@ feature has been added, with minor releases if a major bug is found.
 Port by Tetsuro Mori (2026).
 
 The original Gens core is written in 32-bit x86 assembly, so it could
-not be built as a 64-bit program. This port replaces the assembly
-parts that the Mega Drive / Genesis and the Sega CD need with C, so
-that Gens/GS builds and runs as a native 64-bit Windows program
+not be built as a 64-bit program. This port replaces all of the
+assembly emulation core (Mega Drive / Genesis, Sega CD and 32X) with
+C, so that Gens/GS builds and runs as a native 64-bit Windows program
 (x86_64).
 
 Changes:
@@ -48,6 +48,12 @@ Changes:
   status export (misc/misc.c) and the debugger cell viewer
   (debugger/mcd_cell_dump.c) are ported to C. The ASIC's saved
   addresses are now offsets instead of raw pointers.
+- 32X: the SH-2 interpreter (cpu/sh2/sh2a.c), the SH-2 on-chip
+  peripherals (cpu/sh2/sh2_io.c), the SH-2 memory map
+  (mem/mem_sh2.c) and the 68000-side 32X memory map
+  (mem/mem_m68k_32x.c) are ported to C. In the C core the SH-2 PC is
+  kept as an SH-2 address (not a host pointer), so savestates no
+  longer contain raw pointers.
 - 64-bit cleanup: pointer/integer casts, Win32 API calls that store
   pointers (GWLP_WNDPROC, GCLP_HICON, GCLP_HCURSOR), a truncated image
   list handle, a raw pointer saved in YM2612 savestates, and the
@@ -56,17 +62,19 @@ Changes:
   static functions in w32u, missing headers, a Makefile.am typo,
   libtool RC tag, libpng/zlib link order).
 
-Current limitations:
-- 32X is not ported yet in the 64-bit build. Its code is replaced by
-  placeholders (src/gens/gens_core/core_c_stubs*.c) and loading a 32X
-  game shows a "not available" message.
+Current limitations / testing:
 - Tested with small self-made test programs:
   - Genesis: 68000, VDP interrupts, Z80 and Z80 interrupts.
   - Sega CD: sub CPU start-up, COMM registers, Program RAM write
     protect, font registers, timer/INT2/graphics interrupts, Word RAM
     2M/1M modes, the graphics ASIC in 7 modes, Backup RAM and PCM RAM.
-    The 64-bit C build gives exactly the same results as the original
-    32-bit assembly build.
+  - 32X (booted with the built-in open-source firmware): both SH-2s
+    running an ALU / multiply / MAC / divide / shift / branch /
+    delay-slot / addressing-mode exerciser, DIVU, DMAC, cache data
+    array, VINT and CMD interrupts, packed-pixel frame buffer output,
+    and the 68000-side adapter, COMM, bank and RV registers.
+  For the Sega CD and 32X tests, the 64-bit C build gives exactly the
+  same (pixel-identical) results as the original 32-bit assembly build.
   Commercial games, CD audio, sound, input and savestate compatibility
   with older builds have not been fully tested yet.
 

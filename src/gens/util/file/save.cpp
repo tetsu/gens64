@@ -1791,7 +1791,14 @@ void Savestate::GsxImport32X(const unsigned char* data)
 		context->Fetch_End	= le32_to_cpu(sv.cpu[contextNum].Fetch_End);
 		
 		context->DS_Inst	= le32_to_cpu(sv.cpu[contextNum].DS_Inst);
+#ifdef GENS_CORE_C
+		// C core: DS_PC is an SH2 address. asm savestates store host pointers
+		// (Base_PC + address); C core savestates store Base_PC = 0.
+		context->DS_PC		= le32_to_cpu(sv.cpu[contextNum].DS_PC) -
+					  le32_to_cpu(sv.cpu[contextNum].Base_PC);
+#else
 		context->DS_PC		= le32_to_cpu(sv.cpu[contextNum].DS_PC);	// WARNING: This is affected by a different Base_PC!
+#endif
 		
 		context->Odometer	= le32_to_cpu(sv.cpu[contextNum].Odometer);
 		context->Cycle_TD	= le32_to_cpu(sv.cpu[contextNum].Cycle_TD);
@@ -1983,9 +1990,23 @@ void Savestate::GsxExport32X(unsigned char* data)
 		ExportDataAuto(&context->PR, data, offset, sizeof(context->PR));
 		ExportDataAuto(&context->PC, data, offset, sizeof(context->PC));
 		ExportDataAuto(&context->Status, data, offset, sizeof(context->Status));
+#ifdef GENS_CORE_C
+		{
+			// C core: PC and DS_PC are SH2 addresses, and the fetch cache
+			// (Base_PC) is a host pointer, so save Base_PC as 0.
+			// Fetch_Start / Fetch_End are SH2 addresses.
+			uint32_t base_pc = 0;
+			uint32_t fetch_start = (uint32_t)context->Fetch_Start;
+			uint32_t fetch_end = (uint32_t)context->Fetch_End;
+			ExportDataAuto(&base_pc, data, offset, sizeof(base_pc));
+			ExportDataAuto(&fetch_start, data, offset, sizeof(fetch_start));
+			ExportDataAuto(&fetch_end, data, offset, sizeof(fetch_end));
+		}
+#else
 		ExportDataAuto(&context->Base_PC, data, offset, sizeof(context->Base_PC));
 		ExportDataAuto(&context->Fetch_Start, data, offset, sizeof(context->Fetch_Start));
 		ExportDataAuto(&context->Fetch_End, data, offset, sizeof(context->Fetch_End));
+#endif
 		ExportDataAuto(&context->DS_Inst, data, offset, sizeof(context->DS_Inst));
 		ExportDataAuto(&context->DS_PC, data, offset, sizeof(context->DS_PC));
 		ExportDataAuto(&context->Odometer, data, offset, sizeof(context->Odometer));

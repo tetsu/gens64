@@ -15,6 +15,10 @@
 extern "C" {
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stdint.h>
 
 /* The SH2 emulator uses FASTCALL. */
@@ -83,9 +87,20 @@ struct __SH2_context
 	uint32_t     PC;
 
 	uint32_t     Status;
+#ifdef GENS_CORE_C
+	// C core: PC (above) is the SH2 address of the next instruction.
+	// Base_PC / Fetch_Start / Fetch_End are a host-pointer fetch cache
+	// for the region containing PC. They are rebuilt from PC by
+	// SH2_Set_PC() and are not meaningful in savestates.
+	uintptr_t    Base_PC;
+	uintptr_t    Fetch_Start;
+	uintptr_t    Fetch_End;
+#else
+	// asm core: PC, Base_PC, Fetch_Start and Fetch_End are host pointers.
 	uint32_t     Base_PC;
 	uint32_t     Fetch_Start;
 	uint32_t     Fetch_End;
+#endif
 
 	uint32_t     DS_Inst;
 	uint32_t     DS_PC;
@@ -176,6 +191,13 @@ typedef struct __SH2_context SH2_CONTEXT;
 
 extern SH2_CONTEXT M_SH2;
 extern SH2_CONTEXT S_SH2;
+
+#ifdef GENS_CORE_C
+// C core: the SH2 context that is currently executing or being
+// accessed (the asm core keeps this in ebp). Memory and I/O handlers
+// that need "the current SH2" use this. Defined in sh2a.c.
+extern SH2_CONTEXT *SH2_Cur;
+#endif
 
 
 /*************************/

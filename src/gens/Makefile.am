@@ -39,9 +39,11 @@ gens_core_c_src = \
 		gens_core/mem/mem_s68k.c \
 		gens_core/gfx/gfx_cd.c \
 		gens_core/misc/misc.c \
-		gens_core/cpu/68k/star_68k_c.c \
-		gens_core/core_c_stubs.c \
-		gens_core/core_c_stubs_fn.c
+		gens_core/mem/mem_m68k_32x.c \
+		gens_core/mem/mem_sh2.c \
+		gens_core/cpu/sh2/sh2a.c \
+		gens_core/cpu/sh2/sh2_io.c \
+		gens_core/cpu/68k/star_68k_c.c
 gens_cpu68k_la = $(top_builddir)/src/musashi/libmusashi.la
 EXTRA_DIST = $(gens_core_asm_src) debugger/mcd_cell_dump.asm
 else
@@ -57,7 +59,7 @@ gens_core_asm_o = \
 		gens_core/cpu/sh2/sh2_io.o
 gens_core_c_src =
 gens_cpu68k_la = $(top_builddir)/src/starscream/libstarscream.la
-EXTRA_DIST = gens_core/mem/mem_m68k.c gens_core/mem/mem_m68k_cd.c gens_core/mem/mem_s68k.c gens_core/gfx/gfx_cd.c gens_core/misc/misc.c gens_core/cpu/68k/star_68k_c.c gens_core/core_c_stubs.c gens_core/core_c_stubs_fn.c
+EXTRA_DIST = gens_core/mem/mem_m68k.c gens_core/mem/mem_m68k_cd.c gens_core/mem/mem_s68k.c gens_core/gfx/gfx_cd.c gens_core/misc/misc.c gens_core/mem/mem_m68k_32x.c gens_core/mem/mem_sh2.c gens_core/cpu/sh2/sh2a.c gens_core/cpu/sh2/sh2_io.c gens_core/cpu/68k/star_68k_c.c
 endif
 
 ASMFILES = \

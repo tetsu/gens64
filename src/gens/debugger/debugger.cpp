@@ -485,7 +485,12 @@ static void Refresh_SH2_Inst(int num)
 		sh = &M_SH2;
 	}
 	
+#ifdef GENS_CORE_C
+	// C core: PC is already an SH2 address (instruction + 4).
+	unsigned int PC = sh->PC - 4;
+#else
 	unsigned int PC = (sh->PC - sh->Base_PC) - 4;
+#endif
 	
 	for (unsigned int i = 1; i < 14; i++, PC += 2)
 	{
