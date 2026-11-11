@@ -78,6 +78,8 @@ using std::list;
 #include "gens/gens_window.h"
 #include "gens/gens_window_sync.hpp"
 
+#include "control_win32.hpp"
+
 // Win32 instance
 HINSTANCE ghInstance = NULL;
 
@@ -514,6 +516,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	
 	// Check the startup mode.
 	check_startup_mode(startup);
+	
+	// Open the remote control pipe, if requested.
+	if (startup->control_pipe[0] != 0x00)
+		control_init(startup->control_pipe);
+	
 	free(startup);
 	
 	// Update the UI.
@@ -538,6 +545,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	string cfg_filename = string(PathNames.Gens_Save_Path) + PACKAGE_NAME + ".cfg";
 	Config::save(cfg_filename);
 	
+	control_end();
 	End_All();
 	DestroyWindow(gens_window);
 	

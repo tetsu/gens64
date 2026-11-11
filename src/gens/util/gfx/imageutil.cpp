@@ -471,15 +471,13 @@ int ImageUtil::WriteImage(const char* filename, const ImageFormat format,
 
 
 /**
- * ScreenShot(): Convenience function to take a screenshot of the game.
+ * WriteMDScreen(): Write the MD screen to an image file.
+ * @param filename Image filename.
+ * @param format Image format.
  * @return 0 on success; non-zero on error.
  */
-int ImageUtil::ScreenShot(void)
+int ImageUtil::WriteMDScreen(const char *filename, const ImageFormat format)
 {
-	// If no game is running, don't do anything.
-	if (!Game)
-		return 1;
-	
 	// Variables used:
 	// VDP_Lines.Visible.Total: Number of lines visible on the screen. (bitmap height)
 	// MD_Screen: MD screen buffer.
@@ -488,6 +486,49 @@ int ImageUtil::ScreenShot(void)
 	const int w = vdp_getHPix();
 	const int h = VDP_Lines.Visible.Total;
 	const int start = TAB336[VDP_Lines.Visible.Border_Size] + 8 + vdp_getHPixBegin();
+	
+	void *screen;
+	if (bppMD == 15 || bppMD == 16)
+		screen = (void*)(&MD_Screen.u16[start]);
+	else //if (bppMD == 32)
+		screen = (void*)(&MD_Screen.u32[start]);
+	
+	return WriteImage(filename, format, w, h, 336, screen, bppMD);
+}
+
+
+/**
+ * ScreenShot(): Take a screenshot of the game and save it to the specified file.
+ * @param filename Image filename. (".bmp" saves a BMP; anything else saves a PNG.)
+ * @return 0 on success; non-zero on error.
+ */
+int ImageUtil::ScreenShot(const char *filename)
+{
+	if (!Game)
+		return 1;
+	
+	const char *ext = strrchr(filename, '.');
+	if (ext && !strcasecmp(ext, ".bmp"))
+		return WriteMDScreen(filename, IMAGEFORMAT_BMP);
+	
+#ifdef GENS_PNG
+	if (gsft_png_dll_init() == 0)
+		return WriteMDScreen(filename, IMAGEFORMAT_PNG);
+#endif /* GENS_PNG */
+	
+	return 1;
+}
+
+
+/**
+ * ScreenShot(): Convenience function to take a screenshot of the game.
+ * @return 0 on success; non-zero on error.
+ */
+int ImageUtil::ScreenShot(void)
+{
+	// If no game is running, don't do anything.
+	if (!Game)
+		return 1;
 	
 	// Build the filename.
 	int num = -1;
@@ -517,14 +558,8 @@ int ImageUtil::ScreenShot(void)
 		szprintf(filename, sizeof(filename), "%s%s_%03d.%s", PathNames.Screenshot_Dir, ROM_Filename, num, ext);
 	} while (!access(filename, F_OK));
 	
-	void *screen;
-	if (bppMD == 15 || bppMD == 16)
-		screen = (void*)(&MD_Screen.u16[start]);
-	else //if (bppMD == 32)
-		screen = (void*)(&MD_Screen.u32[start]);
-	
 	// Attempt to save the screenshot.
-	int rval = WriteImage(filename, fmt, w, h, 336, screen, bppMD);
+	int rval = WriteMDScreen(filename, fmt);
 	
 	if (!rval)
 		vdraw_text_printf(1500, "Screen shot %d saved.", num);

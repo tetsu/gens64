@@ -102,6 +102,12 @@ extern "C" {
  */
 void log_msgbox(const char* msg, const char* title);
 
+/**
+ * log_msgbox_disabled: If non-zero, message boxes are not shown.
+ * Set while a remote control command runs, since nobody is there to close them.
+ */
+extern int log_msgbox_disabled;
+
 #ifdef __cplusplus
 }
 #endif

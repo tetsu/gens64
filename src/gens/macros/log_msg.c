@@ -38,6 +38,9 @@
 #include "gens/gens_window.h"
 
 
+int log_msgbox_disabled = 0;
+
+
 /**
  * log_msgbox(): Function used to show a message box for messages with level LOG_MSG_LEVEL_CRITICAL.
  * @param msg Message.
@@ -45,6 +48,9 @@
  */
 void log_msgbox(const char* msg, const char* title)
 {
+	if (log_msgbox_disabled)
+		return;
+	
 #if defined(GENS_UI_WIN32)
 	pMessageBoxU(gens_window, msg, title, MB_ICONSTOP);
 #elif defined(GENS_UI_GTK)

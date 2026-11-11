@@ -74,8 +74,11 @@ class ImageUtil
 					const AlphaChannel alpha = ALPHACHANNEL_NONE);
 		
 		static int ScreenShot(void);
+		static int ScreenShot(const char *filename);
 	
 	protected:
+		static int WriteMDScreen(const char *filename, const ImageFormat format);
+		
 		static int WriteBMP(FILE *fImg, const int w, const int h, const int pitch,
 					const void *screen, const int bpp);
 		

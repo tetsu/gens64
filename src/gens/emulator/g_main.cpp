@@ -94,6 +94,10 @@ using std::string;
 // Video effects.
 #include "video/v_effects.hpp"
 
+#ifdef GENS_OS_WIN32
+#include "control_win32.hpp"
+#endif
+
 // Gens Settings structs.
 Gens_Settings_t Settings;
 Gens_PathNames_t PathNames;
@@ -427,6 +431,12 @@ inline void GensLoopIteration(void)
 	
 	// Update physical controller inputs.
 	input_update();
+	
+#ifdef GENS_OS_WIN32
+	// A remote control client can hold the emulation between frames.
+	if (control_update())
+		return;
+#endif
 	
 #ifdef GENS_DEBUGGER
 	if (IS_DEBUGGING())

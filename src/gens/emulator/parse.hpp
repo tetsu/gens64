@@ -53,6 +53,9 @@ typedef struct _Gens_StartupInfo_t
 #if defined(GENS_OS_WIN32) && !defined(GENS_WIN32_CONSOLE)
 	int enable_debug_console;
 #endif
+#if defined(GENS_OS_WIN32)
+	char control_pipe[128];
+#endif
 } Gens_StartupInfo_t;
 
 Gens_StartupInfo_t* parse_args(int argc, char *argv[]);

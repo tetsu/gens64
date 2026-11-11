@@ -266,6 +266,10 @@ enum optBarg_enum
 	OPTB_TOTAL
 };
 
+#if defined(GENS_OS_WIN32)
+static const char opt_control_pipe[] = "control-pipe";
+#endif
+
 #define LONGOPT_1ARG(index) \
 	{opt1arg_str[(index)].option, required_argument, NULL, 0}
 
@@ -343,6 +347,9 @@ static const struct option long_options[] =
 	LONGOPT_BARG(OPTB_LED),
 	LONGOPT_BARG(OPTB_FIXCHKSUM),
 	LONGOPT_BARG(OPTB_AUTOPAUSE),
+#if defined(GENS_OS_WIN32)
+	{opt_control_pipe, required_argument, NULL, 0},
+#endif
 	{NULL, 0, NULL, 0}
 };
 
@@ -410,6 +417,10 @@ static void _usage(const char *argv0)
 	{
 		printOptBArg(static_cast<optBarg_enum>(i));
 	}
+	
+#if defined(GENS_OS_WIN32)
+	fprintf(stderr, "--%s [name]: Enable remote control on the pipe \\\\.\\pipe\\name\n", opt_control_pipe);
+#endif
 	
 	exit(0);
 }
@@ -499,6 +510,9 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 	startup->filename[0] = 0x00;
 #if defined(GENS_OS_WIN32) && !defined(GENS_WIN32_CONSOLE)
 	startup->enable_debug_console = 0;
+#endif
+#if defined(GENS_OS_WIN32)
+	startup->control_pipe[0] = 0x00;
 #endif
 	
 	while (1)
@@ -665,6 +679,10 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		{
 			// ANSI mode. This is checked by libgsft_w32u,
 			// so we don't have to do anything here.
+		}
+		else if (!strcmp(long_options[option_index].name, opt_control_pipe))
+		{
+			strlcpy(startup->control_pipe, optarg, sizeof(startup->control_pipe));
 		}
 #endif
 		else if (!strcmp(long_options[option_index].name, opt0arg_str[OPT0_HELP].option))

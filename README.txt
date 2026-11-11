@@ -93,6 +93,51 @@ Third-party code added by this port (both MIT license):
 - z80 core, Copyright (c) 2019 Nicolas Allemand (src/mdZ80/z80core.c,
   license in src/mdZ80/z80core_LICENSE.txt)
 
+----------------------------------------------------------------
+
+1.2. Remote control (Windows)
+
+Other programs can control Gens64 through a named pipe. It is off
+unless Gens64 is started with the --control-pipe option:
+
+  gens.exe --control-pipe gens64
+
+Only the user who started Gens64 and administrators can send commands,
+and only from the same computer. Send commands with
+tools/gens64ctl.py, or write one command per line to
+\\.\pipe\gens64. Each command gets one reply line that starts with
+OK or ERR.
+
+  python tools/gens64ctl.py status
+
+Commands:
+  ping, status, help
+  load <file>            Load a ROM. Message boxes are not shown; a
+                         problem gives an ERR reply. (An archive with
+                         several ROMs still opens its selection window.)
+  close                  Close the ROM.
+  hold                   Stop running on its own, between frames.
+  step [frames]          Hold, then run this many frames as fast as
+                         possible. The sound of these frames is not
+                         played. The reply comes when they are done.
+  resume                 Go back to running on its own.
+  reset                  Hard reset.
+  pad <1|2> <buttons>    Hold these buttons, until the next pad command:
+                         up down left right start a b c mode x y z.
+  pad <1|2> none         No buttons pressed, ignoring the keyboard.
+  pad <1|2> off          Give the pad back to the keyboard.
+  read <mem> <addr> <n>  Read n bytes (at most 65536), as hex.
+  write <mem> <addr> <hex>
+                         mem is rom, ram (68000), vram or cram.
+  screenshot <file>      Save the game screen. (.bmp, otherwise PNG)
+  savestate <file>
+  loadstate <file>       Use full paths. Relative paths are based on
+                         the Gens64 save folder or working folder.
+  quit                   Save the settings and exit.
+
+Hold, pad and frame count settings stay in place between connections.
+To start a game from its first frame: hold, then load, then step.
+
 ================================================================
 
 2. Short History of Gens/GS (mostly taken from the Gens for Linux readme)

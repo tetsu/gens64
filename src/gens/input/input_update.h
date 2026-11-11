@@ -30,6 +30,9 @@ extern "C" {
 // Update the controller bitfields.
 void input_update_controllers(void);
 
+// Override a controller's buttons. (port: 0 or 1; pressed: CONTROLLER_* bits)
+void input_set_forced_buttons(int port, int enabled, unsigned int pressed);
+
 #ifdef __cplusplus
 }
 #endif

@@ -32,6 +32,7 @@
 
 #include "emulator/g_main.hpp"
 #include "ui/gens_ui.hpp"
+#include "macros/log_msg.h"
 
 // Unused Parameter macro.
 #include "libgsft/gsft_unused.h"
@@ -388,6 +389,20 @@ GensUI::MsgBox_Response GensUI::msgBox(const string& msg, const string& title,
 	// TODO: Extend this function.
 	// This function is currently merely a copy of the Glade auto-generated open_msgbox() function.
 	// (Well, with an added "title" parameter.)
+	
+	if (log_msgbox_disabled)
+	{
+		// Nobody is there to answer. Give the negative response.
+		switch (style & MSGBOX_BUTTONS_MASK)
+		{
+			case MSGBOX_BUTTONS_OK_CANCEL:
+				return MSGBOX_RESPONSE_CANCEL;
+			case MSGBOX_BUTTONS_YES_NO:
+				return MSGBOX_RESPONSE_NO;
+			default:
+				return MSGBOX_RESPONSE_OK;
+		}
+	}
 	
 	unsigned int msgStyle = 0;
 	

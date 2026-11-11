@@ -150,6 +150,26 @@
 	} while (0)
 
 
+// Buttons forced by input_set_forced_buttons().
+static int input_forced_enabled[2];
+static unsigned int input_forced_pressed[2];
+
+#define INPUT_ALL_BUTTONS 0x00000FFF
+
+
+/**
+ * input_set_forced_buttons(): Override a controller's buttons.
+ * @param port Controller port. (0 or 1)
+ * @param enabled If zero, the controller goes back to its normal input.
+ * @param pressed Pressed buttons. (CONTROLLER_* bits)
+ */
+void input_set_forced_buttons(int port, int enabled, unsigned int pressed)
+{
+	input_forced_enabled[port] = enabled;
+	input_forced_pressed[port] = pressed;
+}
+
+
 /**
  * input_update_controllers(): Update the controller bitfields.
  */
@@ -176,4 +196,10 @@ void input_update_controllers(void)
 		CHECK_PLAYER_PAD(6, 2C);
 		CHECK_PLAYER_PAD(7, 2D);
 	}
+	
+	// Controller buttons are active-low.
+	if (input_forced_enabled[0])
+		Controller_1_Buttons = (Controller_1_Buttons | INPUT_ALL_BUTTONS) & ~input_forced_pressed[0];
+	if (input_forced_enabled[1])
+		Controller_2_Buttons = (Controller_2_Buttons | INPUT_ALL_BUTTONS) & ~input_forced_pressed[1];
 }
