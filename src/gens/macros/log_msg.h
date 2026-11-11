@@ -147,7 +147,7 @@ do { \
 			char box_msg[512], box_title[512]; \
 			snprintf(box_msg, sizeof(box_msg), "%s(): " msg, __func__, ##__VA_ARGS__); \
 			box_msg[sizeof(box_msg)-1] = 0x00; \
-			snprintf(box_title, sizeof(box_msg), "Gens Critical Error: %s", #channel); \
+			snprintf(box_title, sizeof(box_title), "Gens64 Critical Error: %s", #channel); \
 			box_title[sizeof(box_title) - 1] = 0x00; \
 			log_msgbox(box_msg, box_title); \
 		} \

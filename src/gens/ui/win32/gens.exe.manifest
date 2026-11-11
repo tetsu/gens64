@@ -7,7 +7,7 @@
 		processorArchitecture="*"
 	/>
 	
-	<description>Gens/GS r7+</description>
+	<description>Gens64 r7+</description>
 	
 	<!-- Common Controls 6. Needed for visual styles on XP and later. -->
 	<dependency>

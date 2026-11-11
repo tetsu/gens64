@@ -28,6 +28,7 @@
 
 #include "macros/log_msg.h"
 #include "macros/git.h"
+#include "emulator/gens.hpp"
 
 // libgsft includes.
 #include "libgsft/gsft_unused.h"
@@ -375,7 +376,7 @@ static void gens_sighandler(int signum)
 	// Show a message box.
 	char msg_buf[1024];
 	szprintf(msg_buf, sizeof(msg_buf),
-			"Gens/GS has crashed with Signal %d.\n"
+			GENS_APPNAME " has crashed with Signal %d.\n"
 			"%s: %s.\n"
 #ifdef HAVE_SIGACTION
 			"%s"
@@ -388,7 +389,7 @@ static void gens_sighandler(int signum)
 			"- " GENS_GIT_VERSION "\n"
 #endif
 			"\n"
-			"Please report this error to GerbilSoft (gerbilsoft@verizon.net).\n"
+			"Please report this error to the " GENS_APPNAME " developers.\n"
 			"Be sure to include detailed instructions about what you were\n"
 			"doing when this error occurred.",
 			signum, signame, sigdesc
@@ -397,7 +398,7 @@ static void gens_sighandler(int signum)
 #endif
 			);
 	
-	log_msgbox(msg_buf, "Gens/GS Error");
+	log_msgbox(msg_buf, GENS_APPNAME " Error");
 	
 	exit(EXIT_FAILURE);
 }

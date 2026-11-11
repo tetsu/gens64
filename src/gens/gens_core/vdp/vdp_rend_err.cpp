@@ -25,6 +25,7 @@
 // VDP includes.
 #include "vdp_rend.h"
 #include "vdp_io.h"
+#include "emulator/gens.hpp"
 #include "TAB336.h"
 
 // C includes.
@@ -310,7 +311,7 @@ static inline void T_DrawVDPErrorMessage(pixel *screen)
 	int y = VDP_Lines.Visible.Border_Size + ((barY_1 - (16*5)) / 2);
 	int x = (((VDP_Reg.H_Cell - 26) / 2) * 8) + VDP_Reg.H_Pix_Begin;
 	
-	T_DrawText<pixel, text_color>(screen, x, y,    "Gens/GS does not currently");
+	T_DrawText<pixel, text_color>(screen, x, y,    GENS_APPNAME " does not currently");
 	T_DrawText<pixel, text_color>(screen, x, y+16, "  support this VDP mode.");
 	y += 48;
 	

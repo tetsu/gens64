@@ -144,7 +144,7 @@ void selcd_window_show(void)
 	// Create the label for the drive speed dropdown.
 	GtkWidget *lblDriveSpeed = gtk_label_new_with_mnemonic(
 			"Manual CD-ROM speed selection.\n"
-			"You may need to restart Gens for\n"
+			"You may need to restart " GENS_APPNAME " for\n"
 			"this setting to take effect."
 			);
 	gtk_widget_show(lblDriveSpeed);

@@ -39,6 +39,7 @@
 
 // LOG_MSG() support.
 #include "macros/log_msg.h"
+#include "emulator/gens.hpp"
 
 // libgsft includes.
 #include "libgsft/gsft_byteswap.h"
@@ -191,7 +192,7 @@ int osd_font_load(const char *filename)
 		// Invalid file header.
 		gzclose(zf_osd);
 		LOG_MSG(gens, LOG_MSG_LEVEL_WARNING,
-			"'%s' is not a valid Gens/GS OSD font.", filename);
+			"'%s' is not a valid " GENS_APPNAME " OSD font.", filename);
 		return -2;
 	}
 	

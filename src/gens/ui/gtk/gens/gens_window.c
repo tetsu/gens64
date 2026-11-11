@@ -25,6 +25,7 @@
 #include "gens_window_sync.hpp"
 
 #include "emulator/g_main.hpp"
+#include "emulator/gens.hpp"
 
 // Menus.
 #include "gens_menu.hpp"
@@ -106,7 +107,7 @@ void gens_window_create(void)
 	gtk_window_set_resizable(GTK_WINDOW(gens_window), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(gens_window), 0);
 	gtk_window_set_position(GTK_WINDOW(gens_window), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(gens_window), "Gens");
+	gtk_window_set_title(GTK_WINDOW(gens_window), GENS_APPNAME);
 	
 	// Create the main VBox.
 	gens_vbox_main = gtk_vbox_new(FALSE, 0);

@@ -29,6 +29,7 @@
 #include "ui/common/gens/gens_menu.h"
 
 #include "emulator/g_main.hpp"
+#include "emulator/gens.hpp"
 
 // Video Drawing.
 #include "video/vdraw.h"
@@ -79,7 +80,7 @@ void gens_window_init_hWnd(void)
 	}
 	
 	// Create the window.
-	gens_window = pCreateWindowU("Gens", "Gens",
+	gens_window = pCreateWindowU("Gens", GENS_APPNAME,
 					WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
 					320 * 2, 240 * 2,
 					NULL, NULL, ghInstance, NULL);

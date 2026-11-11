@@ -26,6 +26,7 @@
 #include "gens_window_sync.hpp"
 
 #include "emulator/g_main.hpp"
+#include "emulator/gens.hpp"
 
 // Menus.
 #include "gens_menu.hpp"
@@ -58,7 +59,7 @@ void gens_window_create_menubar(void)
 
 
 GensWindow::GensWindow()
-	  : BWindow(BRect(10, 10, 400, 300), "Gens/GS", B_TITLED_WINDOW, B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS | B_QUIT_ON_WINDOW_CLOSE)
+	  : BWindow(BRect(10, 10, 400, 300), GENS_APPNAME, B_TITLED_WINDOW, B_NOT_RESIZABLE | B_ASYNCHRONOUS_CONTROLS | B_QUIT_ON_WINDOW_CLOSE)
 {
 	// Create the menu bar.
 	BMenuBar *menuBar = new BMenuBar(Bounds(), "menu");

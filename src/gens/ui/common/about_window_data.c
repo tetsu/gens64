@@ -36,9 +36,10 @@
 
 // Git version.
 #include "macros/git.h"
+#include "emulator/gens.hpp"
 
 const char* const about_window_title =
-			"Gens/GS"
+			GENS_APPNAME
 			#ifdef GENS_GS_VERSION
 				"\nVersion " GENS_GS_VERSION
 			#endif

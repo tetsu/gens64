@@ -612,7 +612,7 @@ unsigned int ROM::loadROM(const string& filename,
 			// had symbols not representable in the local code page,
 			// and this version of Gens/GS was compiled without Unicode support.
 			strlcat(msg, "\n\nThe selected file has Unicode symbols in its filename;\n"
-				"however, this version of Gens/GS does not have support\n"
+				"however, this version of " GENS_APPNAME " does not have support\n"
 				"for Unicode strings.", sizeof(msg));
 		}
 #endif
@@ -708,7 +708,7 @@ unsigned int ROM::loadROM(const string& filename,
 				szprintf(err_code, sizeof(err_code), "0x%08X", ret);
 				
 				GensUI::msgBox("An unknown error occurred while attempting to open this file.\n"
-						"Please report this as a bug to the Gens/GS developers.\n\n"
+						"Please report this as a bug to the " GENS_APPNAME " developers.\n\n"
 						"Error Code: " + string(err_code),
 						"Unknown Error", GensUI::MSGBOX_ICON_ERROR);
 				break;

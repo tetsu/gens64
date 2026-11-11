@@ -164,7 +164,7 @@ void dir_window_show(void)
 static void WINAPI dir_window_create_child_windows(HWND hWnd)
 {
 	// Create the internal directory entry frame.
-	HWND fraInternalDirs = pCreateWindowU(WC_BUTTON, "Gens/GS Directories",
+	HWND fraInternalDirs = pCreateWindowU(WC_BUTTON, GENS_APPNAME " Directories",
 						WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
 						DLU_X(5), DLU_Y(5),
 						DLU_X(DIR_WINDOW_WIDTH-10),

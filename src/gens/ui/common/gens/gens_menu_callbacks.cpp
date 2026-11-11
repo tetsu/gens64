@@ -838,7 +838,7 @@ static int gens_menu_callback_HelpMenu(uint16_t menuID, uint16_t state)
 			{
 				// No working manual path found.
 				LOG_MSG(gens, LOG_MSG_LEVEL_CRITICAL,
-					"Cannot find the Gens/GS manual.");
+					"Cannot find the " GENS_APPNAME " manual.");
 			}
 			
 			break;

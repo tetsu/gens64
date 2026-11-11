@@ -127,7 +127,7 @@ void dir_window_show(void)
 	gtk_widget_show(vboxDialog);
 	
 	// Create the internal directory entry frame.
-	GtkWidget *fraInternalDirs = gtk_frame_new("<b><i>Gens/GS Directories</i></b>");
+	GtkWidget *fraInternalDirs = gtk_frame_new("<b><i>" GENS_APPNAME " Directories</i></b>");
 	gtk_frame_set_shadow_type(GTK_FRAME(fraInternalDirs), GTK_SHADOW_ETCHED_IN);
 	gtk_label_set_use_markup(GTK_LABEL(gtk_frame_get_label_widget(GTK_FRAME(fraInternalDirs))), TRUE);
 	gtk_container_set_border_width(GTK_CONTAINER(fraInternalDirs), 4);
