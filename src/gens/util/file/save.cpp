@@ -27,6 +27,7 @@
 // C includes.
 #include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <stdint.h>
 
@@ -1752,6 +1753,20 @@ void Savestate::GsxImport32X(const unsigned char* data)
 	
 	gsx_v7_32X sv;
 	memcpy(&sv, data, sizeof(sv));
+	
+	// Older builds also wrote _32X_VDP.HInt_Counter. That moved everything after
+	// the VDP registers by 4 bytes and cut off the last 4 bytes of the file.
+	// Set_SR_Table never changes, so it shows which layout this file has.
+	const size_t sr_table_ofs = offsetof(gsx_v7_32X, set_sr_table);
+	if (memcmp(&data[sr_table_ofs], Set_SR_Table, sizeof(Set_SR_Table)) != 0 &&
+	    memcmp(&data[sr_table_ofs + 4], Set_SR_Table, sizeof(Set_SR_Table)) == 0)
+	{
+		const size_t vdp_ram_ofs = offsetof(gsx_v7_32X, vdp_ram);
+		memcpy(reinterpret_cast<uint8_t*>(&sv) + vdp_ram_ofs, &data[vdp_ram_ofs + 4],
+		       sizeof(sv) - vdp_ram_ofs - 4);
+		memcpy(&sv._32x_ssh2_rom[sizeof(sv._32x_ssh2_rom) - 4],
+		       &_32X_SSH2_Rom.u8[sizeof(_32X_SSH2_Rom) - 4], 4);
+	}
 	
 	for (int contextNum = 0; contextNum < 2; contextNum++)
 	{
