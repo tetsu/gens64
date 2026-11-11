@@ -1916,7 +1916,8 @@ void Savestate::GsxImport32X(const unsigned char* data)
 	
 	memcpy(Set_SR_Table, sv.set_sr_table, sizeof(Set_SR_Table));
 	le32_to_cpu_array(Set_SR_Table, sizeof(Set_SR_Table));
-	Bank_SH2		= le32_to_cpu(sv.bank_sh2);
+	// Bank_SH2 indexes the 68000 handler tables, so don't trust the file.
+	Bank_SH2		= (le32_to_cpu(sv.bank_sh2) & 3);
 	
 	memcpy(PWM_FIFO_R, sv.pwm_fifo_R, sizeof(PWM_FIFO_R));
 	le16_to_cpu_array(PWM_FIFO_R, sizeof(PWM_FIFO_R));
@@ -2090,7 +2091,13 @@ void Savestate::GsxExport32X(unsigned char* data)
 	ExportDataAuto(&Cycles_MSH2, data, offset, sizeof(Cycles_MSH2));
 	ExportDataAuto(&Cycles_SSH2, data, offset, sizeof(Cycles_SSH2));
 	
-	ExportDataAuto(&_32X_VDP, data, offset, sizeof(_32X_VDP));
+	// NOTE: _32X_VDP.HInt_Counter is not part of the savestate format.
+	ExportDataAuto(&_32X_VDP.Mode, data, offset, sizeof(_32X_VDP.Mode));
+	ExportDataAuto(&_32X_VDP.State, data, offset, sizeof(_32X_VDP.State));
+	ExportDataAuto(&_32X_VDP.AF_Data, data, offset, sizeof(_32X_VDP.AF_Data));
+	ExportDataAuto(&_32X_VDP.AF_St, data, offset, sizeof(_32X_VDP.AF_St));
+	ExportDataAuto(&_32X_VDP.AF_Len, data, offset, sizeof(_32X_VDP.AF_Len));
+	ExportDataAuto(&_32X_VDP.AF_Line, data, offset, sizeof(_32X_VDP.AF_Line));
 	ExportDataAuto(&_32X_VDP_Ram.u8[0], data, offset, sizeof(_32X_VDP_Ram));
 	ExportDataAuto(_32X_VDP_CRam, data, offset, sizeof(_32X_VDP_CRam));
 	
