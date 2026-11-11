@@ -34,6 +34,7 @@
 
 #include "g_main.hpp"
 #include "md_palette.hpp"
+#include "options.hpp"
 #include "util/file/rom.hpp"
 
 // Save file handlers.
@@ -112,7 +113,7 @@ static const opt1arg_str_t opt1arg_str[] =
 	{"32xssh2bios",		"filename",	"32X Slave SH2 BIOS"},
 	{"contrast",		"number",	"Contrast (-100 -> 100)"},
 	{"brightness",		"number",	"Brightness (-100 -> 100)"},
-	{"frameskip",		"number",	"Frameskip (-1 [Auto] -> 9)"},
+	{"frameskip",		"number",	"Frameskip (-1 [Auto] -> 8)"},
 	{"soundrate",		"rate",		"Sound Rate (11025, 22050, 44100 Hz)"},
 	{"msh2-speed",		"percentage",	"Master SH2 Speed"},
 	{"ssh2-speed",		"percentage",	"Slave SH2 Speed"},
@@ -214,7 +215,6 @@ static const optBarg_str_t optBarg_str[] =
 #endif /* GENS_OS_WIN32 */
 	OPTBARG_STR("greyscale",	"Greyscale"),
 	OPTBARG_STR("invert",		"Invert color"),
-	OPTBARG_STR("scale-colors",	"Scale colors to full RGB"),
 	OPTBARG_STR("spritelimit",	"Sprite limit"),
 	OPTBARG_STR("sound",		"Sound"),
 	OPTBARG_STR("stereo",		"Stereo"),
@@ -244,7 +244,6 @@ enum optBarg_enum
 #endif /* GENS_OS_WIN32 */
 	OPTB_GREYSCALE,
 	OPTB_INVERT,
-	OPTB_SCALE,
 	OPTB_SPRITELIMIT,
 	OPTB_SOUND,
 	OPTB_STEREO,
@@ -331,7 +330,6 @@ static const struct option long_options[] =
 #endif /* GENS_OS_WIN32 */
 	LONGOPT_BARG(OPTB_GREYSCALE),
 	LONGOPT_BARG(OPTB_INVERT),
-	LONGOPT_BARG(OPTB_SCALE),
 	LONGOPT_BARG(OPTB_SPRITELIMIT),
 	LONGOPT_BARG(OPTB_SOUND),
 	LONGOPT_BARG(OPTB_STEREO),
@@ -382,7 +380,7 @@ static inline void printOptBArg(optBarg_enum opt)
 		optBarg_str[opt].description);
 }
 
-static void _usage(const char *argv0)
+static void _usage(const char *argv0, int status)
 {
 	// TODO: Display this in a message box on Win32.
 	// Well, either that or a custom window.
@@ -425,7 +423,7 @@ static void _usage(const char *argv0)
 	fprintf(stderr, "--%s [name]: Enable remote control on the pipe \\\\.\\pipe\\name\n", opt_control_pipe);
 #endif
 	
-	exit(0);
+	exit(status);
 }
 
 #define TEST_OPTION_STRING(option, strbuf)		\
@@ -433,6 +431,29 @@ if (!strcmp(long_options[option_index].name, option))	\
 {							\
 	strlcpy(strbuf, optarg, sizeof(strbuf));	\
 	continue;					\
+}
+
+/** Directory names need a trailing separator, since file names are appended to them. **/
+#define TEST_OPTION_DIR(option, strbuf)				\
+if (!strcmp(long_options[option_index].name, option))		\
+{								\
+	strlcpy(strbuf, optarg, sizeof(strbuf));		\
+	const size_t dir_len = strlen(strbuf);			\
+	if (dir_len > 0 && strbuf[dir_len-1] != GSFT_DIR_SEP_CHR)	\
+		strlcat(strbuf, GSFT_DIR_SEP_STR, sizeof(strbuf));	\
+	continue;						\
+}
+
+#define TEST_OPTION_ENABLE_FN(option, setter)					\
+if (!strcmp(long_options[option_index].name, option.enable))			\
+{										\
+	setter(true);								\
+	continue;								\
+}										\
+else if (!strcmp(long_options[option_index].name, option.disable))		\
+{										\
+	setter(false);								\
+	continue;								\
 }
 
 #define TEST_OPTION_ENABLE(option, enablevar)					\
@@ -538,13 +559,13 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		}
 		
 		// Test string options.
-		TEST_OPTION_STRING(opt1arg_str[OPT1_ROMPATH].option, Rom_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_SAVEPATH].option, State_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_SRAMPATH].option, SRAM_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_BRAMPATH].option, BRAM_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_DUMPWAVPATH].option, PathNames.Dump_WAV_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_DUMPGYMPATH].option, PathNames.Dump_GYM_Dir);
-		TEST_OPTION_STRING(opt1arg_str[OPT1_SCREENSHOTPATH].option, PathNames.Screenshot_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_ROMPATH].option, Rom_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_SAVEPATH].option, State_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_SRAMPATH].option, SRAM_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_BRAMPATH].option, BRAM_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_DUMPWAVPATH].option, PathNames.Dump_WAV_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_DUMPGYMPATH].option, PathNames.Dump_GYM_Dir);
+		TEST_OPTION_DIR(opt1arg_str[OPT1_SCREENSHOTPATH].option, PathNames.Screenshot_Dir);
 		TEST_OPTION_STRING(opt1arg_str[OPT1_GENESISBIOS].option, BIOS_Filenames.MD_TMSS);
 		TEST_OPTION_STRING(opt1arg_str[OPT1_USACDBIOS].option, BIOS_Filenames.SegaCD_US);
 		TEST_OPTION_STRING(opt1arg_str[OPT1_EUROPECDBIOS].option, BIOS_Filenames.MegaCD_EU);
@@ -555,7 +576,6 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_GREYSCALE], Greyscale);
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_INVERT], Invert_Color);
-		//TEST_OPTION_ENABLE(optBarg_str[OPTB_SCALE], Scale_Colors);
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_SPRITELIMIT], Sprite_Over);
 		TEST_OPTION_NUMERIC(opt1arg_str[OPT1_FRAMESKIP].option, Frame_Skip);
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_Z80], Z80_State);
@@ -572,72 +592,28 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_LED], Show_LED);
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_FIXCHKSUM], Auto_Fix_CS);
 		TEST_OPTION_ENABLE(optBarg_str[OPTB_AUTOPAUSE], Auto_Pause);
-		TEST_OPTION_NUMERIC(opt1arg_str[OPT1_RAMCART_SIZE].option, BRAM_Ex_Size);
+		if (!strcmp(long_options[option_index].name, opt1arg_str[OPT1_RAMCART_SIZE].option))
+		{
+			Options::setSegaCD_SRAMSize(strtol(optarg, (char**)NULL, 10));
+			continue;
+		}
 		
 		// Contrast / Brightness
 		TEST_OPTION_NUMERIC_SCALE(opt1arg_str[OPT1_CONTRAST].option, Contrast_Level, 100);
 		TEST_OPTION_NUMERIC_SCALE(opt1arg_str[OPT1_BRIGHTNESS].option, Brightness_Level, 100);
 		
-		// Other options that can't be handled by macros.
-		if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_STRETCH].enable))
-		{
-			vdraw_set_stretch(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_STRETCH].disable))
-		{
-			vdraw_set_stretch(false);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_SOUND].enable))
-		{
-			audio_set_enabled(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_SOUND].disable))
-		{
-			audio_set_enabled(false);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_STEREO].enable))
-		{
-			audio_set_stereo(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_STEREO].disable))
-		{
-			audio_set_stereo(false);
-		}
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_STRETCH], vdraw_set_stretch);
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_SOUND], audio_set_enabled);
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_STEREO], audio_set_stereo);
 #ifdef GENS_OS_WIN32
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_SWBLIT].enable))
-		{
-			vdraw_set_sw_render(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_SWBLIT].disable))
-		{
-			vdraw_set_sw_render(false);
-		}
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_SWBLIT], vdraw_set_sw_render);
 #endif /* GENS_OS_WIN32 */
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_FASTBLUR].enable))
-		{
-			vdraw_set_fast_blur(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_FASTBLUR].disable))
-		{
-			vdraw_set_fast_blur(false);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_FPS].enable))
-		{
-			vdraw_set_fps_enabled(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_FPS].disable))
-		{
-			vdraw_set_fps_enabled(false);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_MSG].enable))
-		{
-			vdraw_set_msg_enabled(true);
-		}
-		else if (!strcmp(long_options[option_index].name, optBarg_str[OPTB_MSG].disable))
-		{
-			vdraw_set_fps_enabled(false);
-		}
-		else if (!strcmp(long_options[option_index].name, opt0arg_str[OPT0_FS].option))
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_FASTBLUR], vdraw_set_fast_blur);
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_FPS], vdraw_set_fps_enabled);
+		TEST_OPTION_ENABLE_FN(optBarg_str[OPTB_MSG], vdraw_set_msg_enabled);
+		
+		// Other options that can't be handled by macros.
+		if (!strcmp(long_options[option_index].name, opt0arg_str[OPT0_FS].option))
 		{
 			vdraw_set_fullscreen(true);
 		}
@@ -690,13 +666,25 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 #endif
 		else if (!strcmp(long_options[option_index].name, opt0arg_str[OPT0_HELP].option))
 		{
-			_usage(argv[0]);
+			_usage(argv[0], 0);
 		}
 		else 
 		{
-			_usage(argv[0]);
+			_usage(argv[0], 1);
 		}
 	}
+	
+	// The Graphics menu has Auto (-1) and 0 to 8.
+	if (Frame_Skip < -1)
+		Frame_Skip = -1;
+	else if (Frame_Skip > 8)
+		Frame_Skip = 8;
+	
+	// The SH2 speeds are used to calculate cycle counts.
+	if (MSH2_Speed < 0)
+		MSH2_Speed = 0;
+	if (SSH2_Speed < 0)
+		SSH2_Speed = 0;
 	
 	// Make sure contrast and brightness are in range.
 	if (Contrast_Level < 0)
@@ -712,7 +700,7 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 	if (optind < argc - 1 || error)
 	{
 		fputs("Arguments not understood.\n", stderr);
-		_usage(argv[0]);
+		_usage(argv[0], 1);
 	}
 	else if (optind == (argc - 1))
 	{
