@@ -103,7 +103,6 @@ static const opt1arg_str_t opt1arg_str[] =
 	{"dumpwavpath",		"pathname",	"Path where to save your WAV files"},
 	{"dumpgympath",		"pathname",	"Path where to save your GYM files"},
 	{"screenshotpath",	"pathname",	"Path where to save your screenshot files"},
-	{"patchpath",		"pathname",	"Path where to save your patch files"},
 	{"genesisbios",		"filename",	"Genesis BIOS"},
 	{"usacdbios",		"filename",	"USA SegaCD BIOS"},
 	{"europecdbios",	"filename",	"European MegaCD BIOS"},
@@ -121,6 +120,7 @@ static const opt1arg_str_t opt1arg_str[] =
 	{NULL, NULL, NULL}
 };
 
+// NOTE: These must be in the same order as opt1arg_str[].
 enum opt1arg_enum
 {
 	OPT1_GAME = 0,
@@ -269,6 +269,9 @@ enum optBarg_enum
 #if defined(GENS_OS_WIN32)
 static const char opt_control_pipe[] = "control-pipe";
 #endif
+
+// Compile-time check that opt1arg_str[] and opt1arg_enum match.
+typedef char opt1arg_table_matches_enum[((sizeof(opt1arg_str) / sizeof(opt1arg_str[0])) - 1 == OPT1_TOTAL) ? 1 : -1];
 
 #define LONGOPT_1ARG(index) \
 	{opt1arg_str[(index)].option, required_argument, NULL, 0}
