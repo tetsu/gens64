@@ -889,93 +889,112 @@ static FORCE_INLINE void T_Render_Line_ScrollA(void)
 }
 
 
+// Sprite Attribute Table index of each entry in Sprite_Struct[].
+static uint8_t Sprite_Table_Index[128];
+
+
 /**
  * T_Make_Sprite_Struct(): Fill Sprite_Struct[] with information from the Sprite Attribute Table.
  * @param interlaced If true, using Interlaced Mode 2. (2x res)
- * @param partial If true, only do a partial update. (X pos, X size)
  */
-template<bool interlaced, bool partial>
+template<bool interlaced>
 static FORCE_INLINE void T_Make_Sprite_Struct(void)
 {
-	uint16_t *CurSpr = VDP_Reg.Spr_Addr;
+	unsigned int table_idx = 0;
 	unsigned int spr_num = 0;
 	unsigned int link;
-	
+
 	// H40 allows 80 sprites; H32 allows 64 sprites.
 	// Essentially, it's (H_Cell * 2).
 	// [Nemesis' Sprite Masking and Overflow Test ROM: Test #9]
 	const unsigned int max_spr = (VDP_Reg.H_Cell * 2);
-	
+
 	do
 	{
+		const uint16_t *CurSpr = VDP_Reg.Spr_Addr + (table_idx * (8>>1));
+		Sprite_Table_Index[spr_num] = (uint8_t)table_idx;
+
 		// Sprite position.
 		Sprite_Struct[spr_num].Pos_X = (CurSpr[3] & 0x1FF) - 128;
-		if (!partial)
+		if (interlaced)
 		{
-			if (interlaced)
-			{
-				// Interlaced mode. Y position is 10-bit.
-				Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x3FF) - 256;
-			}
-			else
-			{
-				// Non-Interlaced mode. Y position is 9-bit.
-				Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x1FF) - 128;
-			}
+			// Interlaced mode. Y position is 10-bit.
+			Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x3FF) - 256;
 		}
-		
+		else
+		{
+			// Non-Interlaced mode. Y position is 9-bit.
+			Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x1FF) - 128;
+		}
+
 		// Sprite size.
 		uint8_t sz = (CurSpr[1] >> 8);
 		Sprite_Struct[spr_num].Size_X = ((sz >> 2) & 3) + 1;	// 1 more than the original value.
-		if (!partial)
-			Sprite_Struct[spr_num].Size_Y = sz & 3;		// Exactly the original value.
-		
+		Sprite_Struct[spr_num].Size_Y = sz & 3;			// Exactly the original value.
+
 		// Determine the maximum positions.
 		Sprite_Struct[spr_num].Pos_X_Max =
 				Sprite_Struct[spr_num].Pos_X +
 				((Sprite_Struct[spr_num].Size_X * 8) - 1);
-		
-		if (!partial)
+
+		if (interlaced)
 		{
-			if (interlaced)
-			{
-				// Interlaced mode. Cells are 8x16.
-				Sprite_Struct[spr_num].Pos_Y_Max =
-						Sprite_Struct[spr_num].Pos_Y +
-						((Sprite_Struct[spr_num].Size_Y * 16) + 15);
-			}
-			else
-			{
-				// Non-Interlaced mode. Cells are 8x8.
-				Sprite_Struct[spr_num].Pos_Y_Max =
-						Sprite_Struct[spr_num].Pos_Y +
-						((Sprite_Struct[spr_num].Size_Y * 8) + 7);
-			}
-			
-			// Tile number. (Also includes palette, priority, and flip bits.)
-			Sprite_Struct[spr_num].Num_Tile = CurSpr[2];
+			// Interlaced mode. Cells are 8x16.
+			Sprite_Struct[spr_num].Pos_Y_Max =
+					Sprite_Struct[spr_num].Pos_Y +
+					((Sprite_Struct[spr_num].Size_Y * 16) + 15);
 		}
-		
+		else
+		{
+			// Non-Interlaced mode. Cells are 8x8.
+			Sprite_Struct[spr_num].Pos_Y_Max =
+					Sprite_Struct[spr_num].Pos_Y +
+					((Sprite_Struct[spr_num].Size_Y * 8) + 7);
+		}
+
+		// Tile number. (Also includes palette, priority, and flip bits.)
+		Sprite_Struct[spr_num].Num_Tile = CurSpr[2];
+
 		// Link number. Bit 7 of this byte is unused.
 		link = (CurSpr[1] & 0x7F);
-		
+
 		// Increment the sprite number.
 		spr_num++;
 		if (link == 0)
 			break;
-		
+
 		// Go to the next sprite.
-		CurSpr = VDP_Reg.Spr_Addr + (link * (8>>1));
-		
+		table_idx = link;
+
 		// Stop processing after:
 		// - Link number is 0. (checked above)
 		// - Link number exceeds maximum number of sprites.
 		// - We've processed the maximum number of sprites.
 	} while (link < max_spr && spr_num < max_spr);
-	
+
 	// Store the total number of sprites.
-	if (!partial)
-		TotalSprites = spr_num;
+	TotalSprites = spr_num;
+}
+
+
+/**
+ * Update_Sprite_Struct_Partial(): Update Sprite_Struct[] after the table address changed.
+ * The VDP keeps an internal copy of each sprite's Y position, size and link,
+ * and changing the table address doesn't reload it. Only the X position and
+ * the tile number are read from the table in VRAM, using the old links.
+ */
+static FORCE_INLINE void Update_Sprite_Struct_Partial(void)
+{
+	for (unsigned int spr_num = 0; spr_num < TotalSprites; spr_num++)
+	{
+		const uint16_t *CurSpr = VDP_Reg.Spr_Addr + (Sprite_Table_Index[spr_num] * (8>>1));
+
+		Sprite_Struct[spr_num].Pos_X = (CurSpr[3] & 0x1FF) - 128;
+		Sprite_Struct[spr_num].Pos_X_Max =
+				Sprite_Struct[spr_num].Pos_X +
+				((Sprite_Struct[spr_num].Size_X * 8) - 1);
+		Sprite_Struct[spr_num].Num_Tile = CurSpr[2];
+	}
 }
 
 
@@ -1507,17 +1526,17 @@ void VDP_Render_Line_m5(void)
 		{
 			// Interlaced.
 			if (VDP_Flags.VRam)
-				T_Make_Sprite_Struct<true, false>();
+				T_Make_Sprite_Struct<true>();
 			else if (VDP_Flags.VRam_Spr)
-				T_Make_Sprite_Struct<true, true>();
+				Update_Sprite_Struct_Partial();
 		}
 		else
 		{
 			// Non-Interlaced.
 			if (VDP_Flags.VRam)
-				T_Make_Sprite_Struct<false, false>();
+				T_Make_Sprite_Struct<false>();
 			else if (VDP_Flags.VRam_Spr)
-				T_Make_Sprite_Struct<false, true>();
+				Update_Sprite_Struct_Partial();
 		}
 		
 		// Clear the VRam flags.
@@ -1838,17 +1857,17 @@ void VDP_Render_Line_m5_32X(void)
 		{
 			// Interlaced.
 			if (VDP_Flags.VRam)
-				T_Make_Sprite_Struct<true, false>();
+				T_Make_Sprite_Struct<true>();
 			else if (VDP_Flags.VRam_Spr)
-				T_Make_Sprite_Struct<true, true>();
+				Update_Sprite_Struct_Partial();
 		}
 		else
 		{
 			// Non-Interlaced.
 			if (VDP_Flags.VRam)
-				T_Make_Sprite_Struct<false, false>();
+				T_Make_Sprite_Struct<false>();
 			else if (VDP_Flags.VRam_Spr)
-				T_Make_Sprite_Struct<false, true>();
+				Update_Sprite_Struct_Partial();
 		}
 		
 		// Clear the VRam flags.
