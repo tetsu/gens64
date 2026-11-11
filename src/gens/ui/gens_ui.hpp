@@ -83,6 +83,9 @@ class GensUI
 		static void wakeup(void);
 		
 		static void setWindowTitle(const std::string& title);
+#ifdef GENS_OS_WIN32
+		static void setWindowTitleSuffix(const std::string& suffix);
+#endif
 		static void setWindowVisibility(const bool visibility);
 		
 		static std::string openFile(const std::string& title, const std::string& initFile,

@@ -21,6 +21,9 @@ def connect(path, deadline):
     while True:
         try:
             return open(path, "r+b", buffering=0)
+        except FileNotFoundError:
+            # Nothing is serving this pipe, so waiting won't help.
+            raise
         except OSError as err:
             if time.monotonic() >= deadline:
                 raise err

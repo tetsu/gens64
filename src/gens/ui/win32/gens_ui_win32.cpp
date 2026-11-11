@@ -357,10 +357,25 @@ void GensUI::wakeup(void)
  * setWindowTitle(): Sets the window title.
  * @param title New window title.
  */
+static string windowTitle;
+static string windowTitleSuffix;
 void GensUI::setWindowTitle(const string& title)
 {
-	pSetWindowTextU(gens_window, title.c_str());
+	windowTitle = title;
+	pSetWindowTextU(gens_window, (windowTitle + windowTitleSuffix).c_str());
 	update();
+}
+
+
+/**
+ * setWindowTitleSuffix(): Set text shown after the window title.
+ * It stays in place when the window title changes.
+ * @param suffix Text to show after the window title.
+ */
+void GensUI::setWindowTitleSuffix(const string& suffix)
+{
+	windowTitleSuffix = suffix;
+	setWindowTitle(windowTitle);
 }
 
 

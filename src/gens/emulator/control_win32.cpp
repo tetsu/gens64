@@ -54,6 +54,9 @@ using std::string;
 #include "debugger/debugger.hpp"
 #include "audio/audio.h"
 #include "gens_core/io/io.h"
+#include "gens_core/mem/mem_s68k.h"
+#include "gens_core/mem/mem_sh2.h"
+#include "gens_core/mem/mem_z80.h"
 #include "gens_core/vdp/vdp_io.h"
 #include "input/input_update.h"
 #include "mdp/mdp_error.h"
@@ -65,6 +68,7 @@ using std::string;
 #include "util/sound/gym.hpp"
 #include "video/vdraw.h"
 #include "gens/gens_window_sync.hpp"
+#include "ui/gens_ui.hpp"
 
 // Win32 includes.
 #include "libgsft/w32u/w32u_windows.h"
@@ -91,6 +95,15 @@ using std::string;
 
 // Frames to run per main loop iteration, so the window stays responsive.
 #define FRAMES_PER_ITERATION	8
+
+// Memories that the MDP host functions don't cover.
+enum
+{
+	MEM_Z80_RAM = MDP_MEM_MAX,
+	MEM_MCD_PRG_RAM,
+	MEM_MCD_WORD_RAM,
+	MEM_32X_RAM
+};
 
 static HANDLE hPipe = INVALID_HANDLE_VALUE;
 static bool client_connected = false;
@@ -287,6 +300,10 @@ static int parse_memory_id(const char *name)
 		{"ram",		MDP_MEM_MD_RAM},
 		{"vram",	MDP_MEM_MD_VRAM},
 		{"cram",	MDP_MEM_MD_CRAM},
+		{"z80",	MEM_Z80_RAM},
+		{"mcdprg",	MEM_MCD_PRG_RAM},
+		{"mcdword",	MEM_MCD_WORD_RAM},
+		{"32xram",	MEM_32X_RAM},
 	};
 
 	if (name != NULL)
@@ -298,8 +315,78 @@ static int parse_memory_id(const char *name)
 		}
 	}
 
-	reply("ERR memory must be rom, ram, vram or cram");
+	reply("ERR memory must be rom, ram, vram, cram, z80, mcdprg, mcdword or 32xram");
 	return MDP_MEM_NULL;
+}
+
+
+/**
+ * extra_memory_byte(): Find a byte in a memory that the MDP host functions don't cover.
+ * @param memID Memory ID.
+ * @param address Address.
+ * @return Pointer to the byte, or NULL if this memory isn't available.
+ */
+static uint8_t *extra_memory_byte(int memID, uint32_t address)
+{
+	switch (memID)
+	{
+		case MEM_Z80_RAM:
+			return &Ram_Z80[address & (sizeof(Ram_Z80) - 1)];
+		
+		case MEM_MCD_PRG_RAM:
+			if (!SegaCD_Started)
+				return NULL;
+			return &Ram_Prg.u8[(address & (sizeof(Ram_Prg) - 1)) ^ 1];
+		
+		case MEM_MCD_WORD_RAM:
+			if (!SegaCD_Started)
+				return NULL;
+			if (Ram_Word_State & 2)
+				return &Ram_Word_1M.u8[(address & (sizeof(Ram_Word_1M) - 1)) ^ 1];
+			return &Ram_Word_2M.u8[(address & (sizeof(Ram_Word_2M) - 1)) ^ 1];
+		
+		case MEM_32X_RAM:
+			if (!_32X_Started)
+				return NULL;
+			return &_32X_Ram.u8[address & (sizeof(_32X_Ram) - 1)];
+		
+		default:
+			return NULL;
+	}
+}
+
+
+static bool is_mdp_memory(int memID)
+{
+	return (memID < MDP_MEM_MAX);
+}
+
+
+static bool memory_read(int memID, uint32_t address, uint8_t *value)
+{
+	if (is_mdp_memory(memID))
+		return (mdp_host_mem_read_8(memID, address, value) == MDP_ERR_OK);
+	
+	const uint8_t *byte = extra_memory_byte(memID, address);
+	if (byte == NULL)
+		return false;
+	
+	*value = *byte;
+	return true;
+}
+
+
+static bool memory_write(int memID, uint32_t address, uint8_t value)
+{
+	if (is_mdp_memory(memID))
+		return (mdp_host_mem_write_8(NULL, memID, address, value) == MDP_ERR_OK);
+	
+	uint8_t *byte = extra_memory_byte(memID, address);
+	if (byte == NULL)
+		return false;
+	
+	*byte = value;
+	return true;
 }
 
 
@@ -346,6 +433,7 @@ static void hold_emulation(void)
 	// Nothing fills the looping sound buffer while the emulation is held.
 	held = true;
 	audio_clear_sound_buffer();
+	GensUI::setWindowTitleSuffix(" [Held by remote control]");
 }
 
 
@@ -447,6 +535,7 @@ static void cmd_resume(char *args)
 	{
 		held = false;
 		Reset_Update_Timers();
+		GensUI::setWindowTitleSuffix("");
 	}
 	reply("OK");
 }
@@ -593,9 +682,9 @@ static void cmd_read(char *args)
 	for (unsigned long i = 0; i < length; i++)
 	{
 		uint8_t value;
-		if (mdp_host_mem_read_8(memID, (uint32_t)(address + i), &value) != MDP_ERR_OK)
+		if (!memory_read(memID, (uint32_t)(address + i), &value))
 		{
-			reply("ERR memory read failed");
+			reply("ERR memory is not available on this system");
 			return;
 		}
 		text += hex[value >> 4];
@@ -635,9 +724,9 @@ static void cmd_write(char *args)
 	for (size_t i = 0; i < digits / 2; i++)
 	{
 		const uint8_t value = (uint8_t)((hex_digit(data[i*2]) << 4) | hex_digit(data[(i*2)+1]));
-		if (mdp_host_mem_write_8(NULL, memID, (uint32_t)(address + i), value) != MDP_ERR_OK)
+		if (!memory_write(memID, (uint32_t)(address + i), value))
 		{
-			reply("ERR memory write failed");
+			reply("ERR memory is not available on this system");
 			return;
 		}
 	}

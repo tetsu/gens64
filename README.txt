@@ -82,7 +82,7 @@ Building the 64-bit version (MSYS2, MINGW64 shell):
 
   autoreconf -fi
   mkdir build64 && cd build64
-  ../configure --disable-debug --without-7z
+  ../configure --disable-debug
   make -j8
 
 The program is built as build64/src/gens/.libs/gens.exe. It needs
@@ -128,7 +128,8 @@ Commands:
   pad <1|2> off          Give the pad back to the keyboard.
   read <mem> <addr> <n>  Read n bytes (at most 65536), as hex.
   write <mem> <addr> <hex>
-                         mem is rom, ram (68000), vram or cram.
+                         mem is rom, ram (68000), vram, cram, z80,
+                         mcdprg, mcdword (Sega CD) or 32xram (32X).
   screenshot <file>      Save the game screen. (.bmp, otherwise PNG)
   savestate <file>
   loadstate <file>       Use full paths. Relative paths are based on
@@ -137,6 +138,18 @@ Commands:
 
 Hold, pad and frame count settings stay in place between connections.
 To start a game from its first frame: hold, then load, then step.
+While the emulation is held, the window title says so.
+
+MCP: tools/gens64_mcp.py offers the same commands as tools for MCP
+clients such as Claude. It needs Python and nothing else. With --exe
+it can also launch Gens64. For example, with Claude Code:
+
+  claude mcp add gens64 -- python C:\path\tools\gens64_mcp.py
+      --exe C:\path\gens.exe
+
+Third-party code change: src/extlib/lzma (LZMA SDK 4.65) has an added
+LZMA2 decoder in Archive/7z/7zDecode.c, for archives made by current
+versions of 7-Zip.
 
 ================================================================
 
