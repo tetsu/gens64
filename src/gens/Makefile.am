@@ -378,7 +378,7 @@ gens_LDADD = \
 		$(top_builddir)/src/mdZ80/libmdZ80.la \
 		$(top_builddir)/src/libgsft/libgsft.la \
 		fw/libgens_fw.la \
-		-lm @RT_LIBS@ @ICONV_LIBS@ @PNG_LIBS@
+		-lm @RT_LIBS@ @ICONV_LIBS@ @PNG_LIBS@ @X11_LIBS@
 
 if GENS_MP3
 gens_LDADD += $(top_builddir)/src/extlib/mp3_dec/libmp3_dec.la

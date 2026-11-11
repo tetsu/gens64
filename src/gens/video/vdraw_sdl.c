@@ -101,7 +101,7 @@ static int vdraw_sdl_init(void)
 	const int h = 240 * scale;
 	
 	// Set up SDL embedding.
-	vdraw_sdl_common_embed(w, h);
+	vdraw_sdl_common_embed(w, h, 0);
 	
 	// Return value.
 	int rval;

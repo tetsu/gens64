@@ -58,9 +58,18 @@
  * vdraw_sdl_common_embed(): Embed the SDL window in the main window.
  * @param w Width.
  * @param h Height.
+ * @param opengl Non-zero if the window will be used with OpenGL.
  */
-void vdraw_sdl_common_embed(const int w, const int h)
+void vdraw_sdl_common_embed(const int w, const int h, const int opengl)
 {
+	// SDL 1.2 running on SDL 2 (sdl12-compat) can only create an OpenGL context
+	// in an embedded window if the window is marked for OpenGL when attached.
+	// (Real SDL 1.2 ignores this.)
+	if (opengl)
+		setenv("SDL_VIDEO_FOREIGN_WINDOW_OPENGL", "1", 1);
+	else
+		unsetenv("SDL_VIDEO_FOREIGN_WINDOW_OPENGL");
+	
 #ifdef GDK_WINDOWING_X11
 	// X11. If windowed, embed the SDL window inside of the GTK+ window.
 	if (vdraw_get_fullscreen())
@@ -83,8 +92,16 @@ void vdraw_sdl_common_embed(const int w, const int h)
 		
 		// Get the Window ID of the SDL socket.
 		char SDL_WindowID[16];
+		GdkWindow *sdl_window = gtk_widget_get_window(gens_window_sdlsock);
 		szprintf(SDL_WindowID, sizeof(SDL_WindowID), "%u",
-			 (uint32_t)(GDK_WINDOW_XWINDOW(gtk_widget_get_window(gens_window_sdlsock))));
+			 (uint32_t)(GDK_WINDOW_XWINDOW(sdl_window)));
+		
+		// SDL 1.2 running on SDL 2 (sdl12-compat) keeps the size that the window
+		// has when it is attached. At startup, the main window hasn't been shown
+		// yet, so the socket's window is still 1x1.
+		// (This has to come after GDK_WINDOW_XWINDOW(), which creates the X window.)
+		gdk_window_resize(sdl_window, w, h);
+		gdk_flush();
 		
 		setenv("SDL_WINDOWID", SDL_WindowID, 1);
 	}

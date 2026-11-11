@@ -150,8 +150,8 @@ case $host in
 		cflags_debug="-g"
 		cflags_optimization=""
 		;;
-	x86_64*linux*)
-		# 64-bit Linux. Requires the portable C core.
+	x86_64*linux* | aarch64*linux*)
+		# 64-bit Linux (x86_64 or arm64). Requires the portable C core.
 		os=linux;
 		obj_format=elf64;
 		cpu_64bit=yes;
@@ -165,7 +165,20 @@ case $host in
 		cflags_debug="-ggdb"
 		cflags_optimization=""
 		;;
-	x86_64*)
+	x86_64*darwin* | aarch64*darwin* | arm64*darwin*)
+		# 64-bit MacOS X (Intel or Apple silicon). Requires the portable C core.
+		os=macosx;
+		obj_format=macho64;
+		cpu_64bit=yes;
+		AC_DEFINE(GENS_OS_MACOSX, 1, MacOS X operating system)
+		AC_DEFINE(GENS_OS_UNIX, 1, Unix operating system)
+		AC_DEFINE(GENS_PLATFORM, "MacOS X", Platform ID)
+		cflags_platform=""
+		ldflags_platform=""
+		cflags_debug="-g"
+		cflags_optimization=""
+		;;
+	x86_64* | aarch64*)
 		os=unix;
 		obj_format=elf64;
 		cpu_64bit=yes;
@@ -250,8 +263,8 @@ ifdef(
 )
 AC_DEFINE(GENS_UI_GTK, 1, Enable the GTK+ UI)
 
-# TODO: Disable deprecated GTK+ features.
-GTK_CFLAGS="$GTK_CFLAGS -DGTK_DISABLE_DEPRECATED -DDISABLE_DEPRECATED -DGSEAL_ENABLE"
+# Deprecated GTK+ features are left enabled, since the UI still uses several
+# that were deprecated in GTK+ 2.22 and 2.24.
 
 #elif test x$ui = xqt4; then
 #
@@ -351,10 +364,10 @@ AC_SUBST(X11_CFLAGS)
 AC_SUBST(X11_LIBS)
 
 # Emulation core: x86 asm (32-bit only) or portable C.
-AC_ARG_ENABLE(core_c, AC_HELP_STRING([--enable-core-c], [Use the portable C emulation core instead of the x86 asm core [[default=no on i386, yes on x86_64]]]), enable_core_c=$enableval, enable_core_c=$cpu_64bit)
+AC_ARG_ENABLE(core_c, AC_HELP_STRING([--enable-core-c], [Use the portable C emulation core instead of the x86 asm core [[default=no on i386, yes on 64-bit CPUs]]]), enable_core_c=$enableval, enable_core_c=$cpu_64bit)
 if test x$cpu_64bit = xyes; then
 	if test x$enable_core_c != xyes; then
-		AC_MSG_WARN([The x86 asm core is 32-bit only; using the portable C core.])
+		AC_MSG_WARN([The x86 asm core only runs on 32-bit x86; using the portable C core.])
 	fi
 	enable_core_c=yes
 fi
@@ -373,7 +386,7 @@ AC_SUBST(CC_FOR_BUILD)
 
 AC_ARG_ENABLE(x86_asm, AC_HELP_STRING([--enable-x86-asm], [Enable x86 assembly optimizations [[default=yes]]]), enable_x86_asm=$enableval, enable_x86_asm=yes)
 if test x$cpu_64bit = xyes -a x$enable_x86_asm = xyes; then
-	AC_MSG_WARN([x86 assembly optimizations are 32-bit only. Disabling.])
+	AC_MSG_WARN([x86 assembly optimizations only run on 32-bit x86. Disabling.])
 	enable_x86_asm=no
 fi
 

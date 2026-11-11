@@ -22,6 +22,8 @@
 #include "gsft_png.h"
 #include "gsft_png_dll.h"
 
+#include <string.h>
+
 
 /**
  * gsft_png_user_read_data(): libpng user-specified read data function.

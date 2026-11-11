@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-void vdraw_sdl_common_embed(const int w, const int h);
+void vdraw_sdl_common_embed(const int w, const int h, const int opengl);
 
 #ifdef __cplusplus
 }

@@ -100,7 +100,7 @@ int vdraw_sdl_gl_init(void)
 	vdraw_gl_init_vsync();
 	
 	// Set up SDL embedding.
-	vdraw_sdl_common_embed(Video.GL.width, Video.GL.height);
+	vdraw_sdl_common_embed(Video.GL.width, Video.GL.height, 1);
 	
 	// Return value.
 	int rval;
