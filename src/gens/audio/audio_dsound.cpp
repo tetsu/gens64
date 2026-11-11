@@ -292,16 +292,7 @@ int audio_dsound_write_sound_buffer(short *dump_buf)
 	if (rval == DSERR_BUFFERLOST || !lpvPtr1)
 		return -1;
 	
-	// TODO: Master Volume support
-#if 0
-	for(int i = 0; i < Seg_Length; i++) 
-	{
-		Seg_R[i] *= MastVol;
-		Seg_R[i] >>= 8;
-		Seg_L[i] *= MastVol;
-		Seg_L[i] >>= 8;
-	}
-#endif
+	audio_apply_volume();
 	
 	if (audio_get_stereo())
 	{

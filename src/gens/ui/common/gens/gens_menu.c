@@ -261,6 +261,7 @@ static const GensMenuItem_t gmiCPU_Country[] =
 
 
 static const GensMenuItem_t gmiSound_Rate[];
+static const GensMenuItem_t gmiSound_Volume[];
 
 static const GensMenuItem_t gmiSound[] =
 {
@@ -268,6 +269,7 @@ static const GensMenuItem_t gmiSound[] =
 	{IDM_SEPARATOR,			GMF_ITEM_SEPARATOR,	NULL,			NULL, 0, 0, 0},
 	{IDM_SOUND_RATE,		GMF_ITEM_SUBMENU,	"&Rate",		&gmiSound_Rate[0], 0, 0, 0},
 	{IDM_SOUND_STEREO,		GMF_ITEM_CHECK,		"&Stereo",		NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME,		GMF_ITEM_SUBMENU,	"&Volume",		&gmiSound_Volume[0], 0, 0, 0},
 	{IDM_SEPARATOR,			GMF_ITEM_SEPARATOR,	NULL,			NULL, 0, 0, 0},
 	{IDM_SOUND_Z80,			GMF_ITEM_CHECK,		"&Z80",			NULL, 0, 0, 0},
 	{IDM_SEPARATOR,			GMF_ITEM_SEPARATOR,	NULL,			NULL, 0, 0, 0},
@@ -289,6 +291,22 @@ static const GensMenuItem_t gmiSound_Rate[] =
 	{IDM_SOUND_RATE_11025,		GMF_ITEM_RADIO,		"11,025 Hz",		NULL, 0, 0, 0},
 	{IDM_SOUND_RATE_22050,		GMF_ITEM_RADIO,		"22,050 Hz",		NULL, 0, 0, 0},
 	{IDM_SOUND_RATE_44100,		GMF_ITEM_RADIO,		"44,100 Hz",		NULL, 0, 0, 0},
+	{0, 0, NULL, NULL, 0, 0, 0}
+};
+
+static const GensMenuItem_t gmiSound_Volume[] =
+{
+	{IDM_SOUND_VOLUME_100,		GMF_ITEM_RADIO,		"100%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_90,		GMF_ITEM_RADIO,		"90%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_80,		GMF_ITEM_RADIO,		"80%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_70,		GMF_ITEM_RADIO,		"70%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_60,		GMF_ITEM_RADIO,		"60%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_50,		GMF_ITEM_RADIO,		"50%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_40,		GMF_ITEM_RADIO,		"40%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_30,		GMF_ITEM_RADIO,		"30%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_20,		GMF_ITEM_RADIO,		"20%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_10,		GMF_ITEM_RADIO,		"10%",			NULL, 0, 0, 0},
+	{IDM_SOUND_VOLUME_0,		GMF_ITEM_RADIO,		"0%",			NULL, 0, 0, 0},
 	{0, 0, NULL, NULL, 0, 0, 0}
 };
 

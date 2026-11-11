@@ -689,6 +689,11 @@ static int gens_menu_callback_SoundMenu(uint16_t menuID, uint16_t state)
 				// Sample rate change.
 				Options::setSoundSampleRate(menuID - IDM_SOUND_RATE_11025);
 			}
+			else if ((menuID & 0xFF00) == IDM_SOUND_VOLUME)
+			{
+				// Master volume change.
+				Options::setSoundVolume((IDM_SOUND_VOLUME_0 - menuID) * AUDIO_VOLUME_STEP);
+			}
 			else
 			{
 				// Unknown menu item ID.

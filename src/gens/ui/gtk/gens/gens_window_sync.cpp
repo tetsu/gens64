@@ -625,6 +625,10 @@ void Sync_Gens_Window_SoundMenu(void)
 	}
 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gens_menu_find_item(id)), TRUE);
 	
+	// Volume
+	id = IDM_SOUND_VOLUME_0 - (audio_get_volume() / AUDIO_VOLUME_STEP);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(gens_menu_find_item(id)), TRUE);
+	
 	const char* sLabel;
 	
 	// WAV dumping

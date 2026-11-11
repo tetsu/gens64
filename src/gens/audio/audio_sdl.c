@@ -189,6 +189,8 @@ static int audio_sdl_write_sound_buffer(short *dump_buf)
 		return 0;
 	}
 	
+	audio_apply_volume();
+	
 	SDL_LockAudio();
 	
 	if (audio_get_stereo())

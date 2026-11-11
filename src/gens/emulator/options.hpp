@@ -77,6 +77,8 @@ class Options
 		static int soundSampleRate(void);
 		static void setSoundSampleRate(const int newRate);
 		
+		static void setSoundVolume(const int newVolume);
+		
 		/** SRAM **/
 		static bool sramEnabled(void);
 		static void setSramEnabled(bool newEnabled);

@@ -88,6 +88,7 @@ static int	audio_sound_rate = 44100;
 static BOOL	audio_enabled = TRUE;
 static BOOL	audio_stereo = TRUE;
 static BOOL	audio_gym_playing = FALSE;
+static int	audio_volume = 100;
 
 
 /**
@@ -245,4 +246,39 @@ void audio_set_stereo(const BOOL new_stereo)
 {
 	audio_stereo = (new_stereo ? TRUE : FALSE);
 	// TODO: Stereo code.
+}
+
+
+int audio_get_volume(void)
+{
+	return audio_volume;
+}
+void audio_set_volume(const int new_volume)
+{
+	// The value can come from the config file.
+	if (new_volume < 0)
+		audio_volume = 0;
+	else if (new_volume > 100)
+		audio_volume = 100;
+	else
+		audio_volume = new_volume - (new_volume % AUDIO_VOLUME_STEP);
+}
+
+
+/**
+ * audio_apply_volume(): Apply the master volume to the current sound segment.
+ * This is only done for live output, so WAV dumps stay at full volume.
+ */
+void audio_apply_volume(void)
+{
+	int i;
+	
+	if (audio_volume == 100)
+		return;
+	
+	for (i = 0; i < audio_seg_length; i++)
+	{
+		Seg_L[i] = (Seg_L[i] * audio_volume) / 100;
+		Seg_R[i] = (Seg_R[i] * audio_volume) / 100;
+	}
 }

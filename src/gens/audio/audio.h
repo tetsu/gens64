@@ -124,6 +124,14 @@ void	audio_set_enabled(const BOOL new_enabled);
 BOOL	audio_get_stereo(void);
 void	audio_set_stereo(const BOOL new_stereo);
 
+// Master volume, in percent. (Always a multiple of AUDIO_VOLUME_STEP.)
+#define AUDIO_VOLUME_STEP 10
+int	audio_get_volume(void);
+void	audio_set_volume(const int new_volume);
+
+// Apply the master volume to the current sound segment.
+void	audio_apply_volume(void);
+
 #ifdef __cplusplus
 }
 #endif

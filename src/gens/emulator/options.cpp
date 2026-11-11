@@ -782,6 +782,16 @@ int Options::soundSampleRate(void)
 }
 
 /**
+ * setSoundVolume(): Change the master volume.
+ * @param newVolume New volume, in percent.
+ */
+void Options::setSoundVolume(const int newVolume)
+{
+	audio_set_volume(newVolume);
+	vdraw_text_printf(2500, "Sound volume set to %d%%", audio_get_volume());
+}
+
+/**
  * setSoundSampleRate(): Change the sample rate.
  * @param Rate Rate ID. (TODO: Make an enum containing the rate IDs.)
  */

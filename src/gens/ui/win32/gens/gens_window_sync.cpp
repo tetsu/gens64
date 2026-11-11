@@ -581,6 +581,13 @@ void Sync_Gens_Window_SoundMenu(void)
 		}
 	}
 	
+	// Volume
+	CheckMenuRadioItem(gens_menu_find_item(IDM_SOUND_VOLUME),
+				IDM_SOUND_VOLUME_100,
+				IDM_SOUND_VOLUME_0,
+				IDM_SOUND_VOLUME_0 - (audio_get_volume() / AUDIO_VOLUME_STEP),
+				MF_BYCOMMAND);
+	
 	const char *dumpLabel;
 	
 	uint32_t audioDumpFlags = MF_BYCOMMAND | (((Game != NULL) && audio_get_enabled()) ? MF_ENABLED : MF_GRAYED);

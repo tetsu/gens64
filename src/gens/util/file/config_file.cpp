@@ -289,6 +289,7 @@ int Config::save(const string& filename)
 	cfg.writeBool("Sound", "State", audio_get_enabled());
 	cfg.writeInt("Sound", "Rate", audio_get_sound_rate());
 	cfg.writeBool("Sound", "Stereo", audio_get_stereo());
+	cfg.writeInt("Sound", "Volume", audio_get_volume());
 	
 	cfg.writeInt("Sound", "Z80 State", Z80_State & Z80_STATE_ENABLED);
 	cfg.writeInt("Sound", "YM2612 State", YM2612_Enable & 1);
@@ -642,6 +643,7 @@ int Config::load(const string& filename, void* gameActive)
 	// Sound settings.
 	audio_set_sound_rate(cfg.getInt("Sound", "Rate", 22050));
 	audio_set_stereo(cfg.getBool("Sound", "Stereo", true));
+	audio_set_volume(cfg.getInt("Sound", "Volume", 100));
 	
 	if (cfg.getInt("Sound", "Z80 State", 1))
 		Z80_State |= Z80_STATE_ENABLED;
