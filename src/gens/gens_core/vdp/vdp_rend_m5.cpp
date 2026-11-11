@@ -956,8 +956,8 @@ static FORCE_INLINE void T_Make_Sprite_Struct(void)
 			Sprite_Struct[spr_num].Num_Tile = CurSpr[2];
 		}
 		
-		// Link number.
-		link = (CurSpr[1] & 0xFF);
+		// Link number. Bit 7 of this byte is unused.
+		link = (CurSpr[1] & 0x7F);
 		
 		// Increment the sprite number.
 		spr_num++;
