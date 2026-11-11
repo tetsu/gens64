@@ -914,12 +914,12 @@ static FORCE_INLINE void T_Make_Sprite_Struct(void)
 		{
 			if (interlaced)
 			{
-				// Interlaced mode. Y position is 11-bit.
+				// Interlaced mode. Y position is 10-bit.
 				Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x3FF) - 256;
 			}
 			else
 			{
-				// Non-Interlaced mode. Y position is 10-bit.
+				// Non-Interlaced mode. Y position is 9-bit.
 				Sprite_Struct[spr_num].Pos_Y = (CurSpr[0] & 0x1FF) - 128;
 			}
 		}
