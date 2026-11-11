@@ -67,6 +67,7 @@ typedef struct
 #define LzmaDec_Construct(p) { (p)->dic = 0; (p)->probs = 0; }
 
 void LzmaDec_Init(CLzmaDec *p);
+void LzmaDec_InitDicAndState(CLzmaDec *p, Bool initDic, Bool initState);
 
 /* There are two types of LZMA streams:
      0) Stream with end mark. That end mark adds about 6 bytes to compressed size.

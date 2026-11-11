@@ -10,6 +10,7 @@
 
 #define k_Copy 0
 #define k_LZMA 0x30101
+#define k_LZMA2 0x21
 #define k_BCJ 0x03030103
 #define k_BCJ2 0x0303011B
 
@@ -80,7 +81,173 @@ static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer
   return SZ_OK;
 }
 
-#define IS_UNSUPPORTED_METHOD(m) ((m) != k_Copy && (m) != k_LZMA)
+/* LZMA2 is a sequence of chunks, each either stored or compressed with LZMA.
+   It is the default method of current versions of 7-Zip.
+   (Written for Gens64; this version of the LZMA SDK predates LZMA2.) */
+
+#define LZMA2_LCLP_MAX 4
+
+static SRes SzLzma2DecodeChunks(CLzmaDec *p, const Byte *in, SizeT inSize, SizeT outSize)
+{
+  SizeT inPos = 0;
+  Bool needInitDic = True, needInitState = True, needInitProps = True;
+
+  for (;;)
+  {
+    unsigned control;
+
+    if (inPos >= inSize)
+      return SZ_ERROR_DATA;
+    control = in[inPos++];
+
+    if (control == 0)
+      return (p->dicPos == outSize) ? SZ_OK : SZ_ERROR_DATA;
+
+    if (control < 0x80)
+    {
+      /* Stored chunk. 1: reset the dictionary; 2: keep it. */
+      SizeT size;
+      Bool initDic = (control == 1);
+
+      if (control > 2 || inSize - inPos < 2 || (!initDic && needInitDic))
+        return SZ_ERROR_DATA;
+      size = (((SizeT)in[inPos] << 8) | in[inPos + 1]) + 1;
+      inPos += 2;
+      if (size > inSize - inPos || size > outSize - p->dicPos)
+        return SZ_ERROR_DATA;
+
+      if (initDic)
+      {
+        needInitState = True;
+        needInitProps = True;
+      }
+      needInitDic = False;
+
+      LzmaDec_InitDicAndState(p, initDic, False);
+      memcpy(p->dic + p->dicPos, in + inPos, size);
+      p->dicPos += size;
+      if (p->checkDicSize == 0 && p->prop.dicSize - p->processedPos <= size)
+        p->checkDicSize = p->prop.dicSize;
+      p->processedPos += (UInt32)size;
+      inPos += size;
+    }
+    else
+    {
+      /* LZMA chunk. Mode: 0 = continue; 1 = reset state; 2 = also new
+         properties; 3 = also reset the dictionary. */
+      unsigned mode = (control >> 5) & 3;
+      Bool initDic = (mode == 3);
+      Bool initState = (mode > 0);
+      SizeT unpackSize, packSize, inProcessed, target;
+      ELzmaStatus status;
+
+      if (inSize - inPos < 4)
+        return SZ_ERROR_DATA;
+      unpackSize = (((SizeT)control & 0x1F) << 16) + ((SizeT)in[inPos] << 8) + in[inPos + 1] + 1;
+      packSize = ((SizeT)in[inPos + 2] << 8) + in[inPos + 3] + 1;
+      inPos += 4;
+
+      if (mode >= 2)
+      {
+        unsigned props, lc, lp, pb;
+        if (inPos >= inSize)
+          return SZ_ERROR_DATA;
+        props = in[inPos++];
+        if (props >= 9 * 5 * 5)
+          return SZ_ERROR_DATA;
+        pb = props / (9 * 5);
+        props %= (9 * 5);
+        lp = props / 9;
+        lc = props % 9;
+        if (lc + lp > LZMA2_LCLP_MAX)
+          return SZ_ERROR_DATA;
+        p->prop.lc = lc;
+        p->prop.lp = lp;
+        p->prop.pb = pb;
+        needInitProps = False;
+      }
+
+      if (needInitProps || (!initDic && needInitDic) || (!initState && needInitState))
+        return SZ_ERROR_DATA;
+      if (packSize > inSize - inPos || unpackSize > outSize - p->dicPos)
+        return SZ_ERROR_DATA;
+      needInitDic = False;
+      needInitState = False;
+
+      LzmaDec_InitDicAndState(p, initDic, initState);
+      target = p->dicPos + unpackSize;
+      inProcessed = packSize;
+      RINOK(LzmaDec_DecodeToDic(p, target, in + inPos, &inProcessed, LZMA_FINISH_ANY, &status));
+      if (p->dicPos != target || inProcessed != packSize)
+        return SZ_ERROR_DATA;
+      inPos += packSize;
+    }
+  }
+}
+
+static SRes SzDecodeLzma2(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inStream,
+    Byte *outBuffer, SizeT outSize, ISzAlloc *allocMain)
+{
+  CLzmaDec state;
+  Byte props[LZMA_PROPS_SIZE];
+  Byte *inBuf;
+  SizeT inBufSize = (SizeT)inSize, filled = 0;
+  UInt32 dicSize;
+  unsigned bits;
+  SRes res;
+
+  if (coder->Props.size != 1 || coder->Props.data[0] > 40 || inBufSize != inSize)
+    return SZ_ERROR_UNSUPPORTED;
+
+  bits = coder->Props.data[0];
+  dicSize = (bits == 40) ? 0xFFFFFFFF : ((UInt32)(2 | (bits & 1)) << (bits / 2 + 11));
+  props[0] = LZMA2_LCLP_MAX;
+  props[1] = (Byte)dicSize;
+  props[2] = (Byte)(dicSize >> 8);
+  props[3] = (Byte)(dicSize >> 16);
+  props[4] = (Byte)(dicSize >> 24);
+
+  inBuf = (Byte *)IAlloc_Alloc(allocMain, inBufSize);
+  if (inBuf == 0 && inBufSize != 0)
+    return SZ_ERROR_MEM;
+
+  res = SZ_OK;
+  while (filled < inBufSize && res == SZ_OK)
+  {
+    void *look;
+    size_t lookahead = inBufSize - filled;
+    if (lookahead > (1 << 18))
+      lookahead = (1 << 18);
+    res = inStream->Look((void *)inStream, (void **)&look, &lookahead);
+    if (res == SZ_OK && lookahead == 0)
+      res = SZ_ERROR_INPUT_EOF;
+    if (res == SZ_OK)
+    {
+      memcpy(inBuf + filled, look, lookahead);
+      filled += lookahead;
+      res = inStream->Skip((void *)inStream, lookahead);
+    }
+  }
+
+  if (res == SZ_OK)
+  {
+    LzmaDec_Construct(&state);
+    res = LzmaDec_AllocateProbs(&state, props, LZMA_PROPS_SIZE, allocMain);
+    if (res == SZ_OK)
+    {
+      state.dic = outBuffer;
+      state.dicBufSize = outSize;
+      LzmaDec_Init(&state);
+      res = SzLzma2DecodeChunks(&state, inBuf, inBufSize, outSize);
+      LzmaDec_FreeProbs(&state, allocMain);
+    }
+  }
+
+  IAlloc_Free(allocMain, inBuf);
+  return res;
+}
+
+#define IS_UNSUPPORTED_METHOD(m) ((m) != k_Copy && (m) != k_LZMA && (m) != k_LZMA2)
 #define IS_UNSUPPORTED_CODER(c) (IS_UNSUPPORTED_METHOD(c.MethodID) || c.NumInStreams != 1 || c.NumOutStreams != 1)
 #define IS_NO_BCJ(c) (c.MethodID != k_BCJ || c.NumInStreams != 1 || c.NumOutStreams != 1)
 #define IS_NO_BCJ2(c) (c.MethodID != k_BCJ2 || c.NumInStreams != 4 || c.NumOutStreams != 1)
@@ -152,7 +319,7 @@ SRes SzDecode2(const UInt64 *packSizes, const CSzFolder *folder,
   {
     CSzCoderInfo *coder = &folder->Coders[ci];
 
-    if (coder->MethodID == k_Copy || coder->MethodID == k_LZMA)
+    if (coder->MethodID == k_Copy || coder->MethodID == k_LZMA || coder->MethodID == k_LZMA2)
     {
       UInt32 si = 0;
       UInt64 offset;
@@ -195,6 +362,10 @@ SRes SzDecode2(const UInt64 *packSizes, const CSzFolder *folder,
         if (inSize != outSizeCur) /* check it */
           return SZ_ERROR_DATA;
         RINOK(SzDecodeCopy(inSize, inStream, outBufCur));
+      }
+      else if (coder->MethodID == k_LZMA2)
+      {
+        RINOK(SzDecodeLzma2(coder, inSize, inStream, outBufCur, outSizeCur, allocMain));
       }
       else
       {
