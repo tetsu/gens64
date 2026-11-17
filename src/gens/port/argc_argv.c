@@ -59,6 +59,11 @@ void convertCmdLineToArgv(const char *lpCmdLine, argc_argv* arg, int add_exe)
 		{
 			i++; 
 		}
+		
+		// Spaces at the end don't start another argument.
+		if (i >= cmdLen)
+			break;
+		
 		if (lpCmdLine[i] == '\"')
 		{
 			i++;
@@ -104,6 +109,11 @@ void convertCmdLineToArgv(const char *lpCmdLine, argc_argv* arg, int add_exe)
 		{
 			i++;
 		}
+		
+		// Spaces at the end don't start another argument.
+		if (i >= cmdLen)
+			break;
+		
 		if (lpCmdLine[i] == '\"')
 		{
 			i++;
