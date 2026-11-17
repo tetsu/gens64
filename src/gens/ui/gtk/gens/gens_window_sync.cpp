@@ -61,6 +61,7 @@ using std::deque;
 
 #include "util/sound/wave.h"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 
 #include "gens_core/vdp/vdp_io.h"
 #include "gens_core/vdp/vdp_rend.h"
@@ -284,6 +285,12 @@ void Sync_Gens_Window_GraphicsMenu(void)
 	
 	// Screenshot
 	gtk_widget_set_sensitive(gens_menu_find_item(IDM_GRAPHICS_SCREENSHOT), (Game != NULL));
+	
+	// Video recording
+	GtkWidget *mnuRecord = gens_menu_find_item(IDM_GRAPHICS_RECORD);
+	gtk_label_set_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(mnuRecord))),
+			   (VRec_Recording ? "Stop Video Recording" : "Start Video Recording"));
+	gtk_widget_set_sensitive(mnuRecord, (Game != NULL));
 	
 	// Backend
 	Sync_Gens_Window_GraphicsMenu_Backend(gens_menu_find_item(IDM_GRAPHICS_BACKEND));

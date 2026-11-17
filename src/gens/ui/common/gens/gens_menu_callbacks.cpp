@@ -69,6 +69,7 @@
 #include "util/file/save.hpp"
 #include "mdZ80/mdZ80.h"
 #include "util/gfx/imageutil.hpp"
+#include "util/video/video_rec.hpp"
 
 // Sega CD
 #include "emulator/g_mcd.hpp"
@@ -461,6 +462,20 @@ static int gens_menu_callback_GraphicsMenu(uint16_t menuID, uint16_t state)
 		case IDM_GRAPHICS_SCREENSHOT:
 			audio_clear_sound_buffer();
 			ImageUtil::ScreenShot();
+			break;
+		
+		case IDM_GRAPHICS_RECORD:
+			audio_clear_sound_buffer();
+			if (!VRec_Recording)
+			{
+				if (vrec_start(NULL) != 0)
+					log_msgbox(vrec_last_error(), "Video Recording");
+			}
+			else
+			{
+				// Failures are shown on the screen.
+				vrec_stop();
+			}
 			break;
 		
 		default:

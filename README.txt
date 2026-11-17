@@ -131,6 +131,10 @@ Commands:
                          mem is rom, ram (68000), vram, cram, z80,
                          mcdprg, mcdword (Sega CD) or 32xram (32X).
   screenshot <file>      Save the game screen. (.bmp, otherwise PNG)
+  record start [<file>]  Start recording a video (see 1.3). Without a
+                         file, a numbered .mp4 goes to the video folder.
+                         The reply names the file.
+  record stop            Finish the video file. The reply names it.
   savestate <file>
   loadstate <file>       Use full paths. Relative paths are based on
                          the Gens64 save folder or working folder.
@@ -150,6 +154,35 @@ it can also launch Gens64. For example, with Claude Code:
 Third-party code change: src/extlib/lzma (LZMA SDK 4.65) has an added
 LZMA2 decoder in Archive/7z/7zDecode.c, for archives made by current
 versions of 7-Zip.
+
+----------------------------------------------------------------
+
+1.3. Video recording
+
+Graphics > Start Video Recording records the game's picture and
+sound to an MP4 file, using ffmpeg. ffmpeg is not included: install
+it and put it on the PATH (on Windows, ffmpeg.exe can also go next
+to gens.exe), or set "FFmpeg Path" in the [Options] section of
+gens.cfg.
+
+Every emulated frame is recorded, so the video plays at normal speed
+with no dropped frames, even when the emulation runs slower or
+faster than real time. While recording, frame skip is ignored.
+Frames are only recorded while the game runs: pausing pauses the
+video, and with the remote control, only stepped frames are recorded.
+
+- Picture: 320 pixels wide (narrower modes are centered), 224 or 240
+  lines, scaled up 2x without smoothing, H.264, 60 fps (50 for PAL).
+  On-screen messages and the FPS counter are not recorded.
+- Sound: AAC, 48 kHz.
+- Files are named after the ROM with a number, like screenshots, and
+  saved in the video folder (Options > Directories).
+- While recording, ffmpeg writes <name>.video.mkv and
+  <name>.audio.mka, and joins them into <name>.mp4 when the
+  recording stops. If ffmpeg fails, those files and its messages in
+  <name>.log are kept.
+- The recording stops on its own when the game is closed, or when
+  the frame rate or the sound settings change.
 
 ================================================================
 

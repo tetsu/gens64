@@ -161,6 +161,15 @@ class Gens64:
     def step(self, args):
         return text_result(self.send("step %d" % integer(args, "frames", 1)))
 
+    def record_start(self, args):
+        line = "record start"
+        if args.get("path"):
+            line += " " + clean(args["path"])
+        return text_result("Recording to " + self.send(line))
+
+    def record_stop(self, args):
+        return text_result("Saved " + self.send("record stop"))
+
     def simple(self, command, args=None, name=None):
         """A command with at most one free-form argument."""
         line = command if name is None else "%s %s" % (command, clean(args[name]))
@@ -184,7 +193,8 @@ TOOLS = {
     "gens_start": ("Launch Gens64, optionally with a ROM. Needs the server's --exe option.",
                    schema({"rom": {"type": "string", "description": "Absolute ROM path."}}),
                    Gens64.start),
-    "gens_status": ("Get the system, game, frame count and whether the emulation is held.",
+    "gens_status": ("Get the system, game, frame count, whether the emulation is held, "
+                    "and whether a video is being recorded.",
                     schema(), lambda g, a: g.simple("status")),
     "gens_load": ("Load a ROM. To start from its first frame, call gens_hold first.",
                   schema(FILE_PROPERTY, ["path"]), lambda g, a: g.simple("load", a, "path")),
@@ -213,6 +223,14 @@ TOOLS = {
                           ["memory", "address", "hex"]),
                    Gens64.write),
     "gens_screenshot": ("Get the current game screen as a PNG image.", schema(), Gens64.screenshot),
+    "gens_record_start": ("Start recording the game's picture and sound to an MP4 file, through ffmpeg. "
+                          "Every emulated frame is recorded, including frames run with gens_step, so "
+                          "the video plays at normal speed. Without a path, a numbered file goes to "
+                          "the video folder.",
+                          schema({"path": {"type": "string", "description": "Absolute path of the .mp4 file."}}),
+                          Gens64.record_start),
+    "gens_record_stop": ("Stop recording and finish the video file. Returns its path.",
+                         schema(), Gens64.record_stop),
     "gens_savestate": ("Save the emulator state to a file.", schema(FILE_PROPERTY, ["path"]),
                        lambda g, a: g.simple("savestate", a, "path")),
     "gens_loadstate": ("Load the emulator state from a file.", schema(FILE_PROPERTY, ["path"]),

@@ -37,6 +37,7 @@
 
 #include "util/sound/wave.h"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 
 #include "libgsft/gsft_byteswap.h"
 #include "macros/force_inline.h"
@@ -608,6 +609,8 @@ static FORCE_INLINE void T_gens_do_MD_frame(void)
 		wav_dump_update();
 	if (GYM_Dumping)
 		gym_dump_update(0, 0, 0);
+	if (VRec_Recording)
+		vrec_update();
 	
 	// Raise the MDP_EVENT_POST_FRAME event.
 	mdp_event_post_frame_t post_frame;
@@ -631,7 +634,11 @@ static FORCE_INLINE void T_gens_do_MD_frame(void)
 
 int Do_Genesis_Frame_No_VDP(void)
 {
-	T_gens_do_MD_frame<false>();
+	// A video recording needs every frame drawn.
+	if (VRec_Recording)
+		T_gens_do_MD_frame<true>();
+	else
+		T_gens_do_MD_frame<false>();
 	return 1;
 }
 int Do_Genesis_Frame(void)

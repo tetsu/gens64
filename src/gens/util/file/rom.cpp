@@ -72,6 +72,7 @@ using std::deque;
 
 #include "util/sound/wave.h"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 
 // libgsft includes.
 #include "libgsft/gsft_byteswap.h"
@@ -1057,6 +1058,8 @@ void ROM::freeROM(ROM_t* ROM_MD)
 		wav_dump_stop();
 	if (GYM_Dumping)
 		gym_dump_stop();
+	if (VRec_Recording)
+		vrec_stop();
 
 	if (SegaCD_Started)
 		Stop_CD();

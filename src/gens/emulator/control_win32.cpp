@@ -66,6 +66,7 @@ using std::string;
 #include "util/file/save.hpp"
 #include "util/gfx/imageutil.hpp"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 #include "video/vdraw.h"
 #include "gens/gens_window_sync.hpp"
 #include "ui/gens_ui.hpp"
@@ -444,7 +445,7 @@ static void cmd_help(char *args)
 {
 	GSFT_UNUSED_PARAMETER(args);
 	reply("OK ping status load close hold resume step reset pad read write "
-	      "screenshot savestate loadstate quit help");
+	      "screenshot record savestate loadstate quit help");
 }
 
 
@@ -469,8 +470,8 @@ static void cmd_status(char *args)
 	else
 		system = "md";
 
-	reply("OK system=%s held=%d paused=%d frames=%u rom=%s",
-	      system, (held ? 1 : 0), (Settings.Paused ? 1 : 0), frames_run,
+	reply("OK system=%s held=%d paused=%d recording=%d frames=%u rom=%s",
+	      system, (held ? 1 : 0), (Settings.Paused ? 1 : 0), (VRec_Recording ? 1 : 0), frames_run,
 	      (Game != NULL ? ROM_Filename : ""));
 }
 
@@ -752,6 +753,35 @@ static void cmd_screenshot(char *args)
 }
 
 
+static void cmd_record(char *args)
+{
+	const char *action = next_token(&args);
+	if (action != NULL && !strcmp(action, "start"))
+	{
+		if (!need_game())
+			return;
+		
+		// Without a file name, the video goes to the video directory.
+		const char *filename = rest_of_line(args);
+		if (vrec_start(*filename != 0x00 ? filename : NULL) != 0)
+			reply("ERR %s", vrec_last_error());
+		else
+			reply("OK %s", vrec_filename());
+	}
+	else if (action != NULL && !strcmp(action, "stop") && *rest_of_line(args) == 0x00)
+	{
+		if (vrec_stop() != 0)
+			reply("ERR %s", vrec_last_error());
+		else
+			reply("OK %s", vrec_filename());
+	}
+	else
+	{
+		reply("ERR usage: record start [<file>] | record stop");
+	}
+}
+
+
 static void cmd_savestate(char *args)
 {
 	if (!need_game())
@@ -818,6 +848,7 @@ static void handle_line(char *line)
 		{"read",	cmd_read},
 		{"write",	cmd_write},
 		{"screenshot",	cmd_screenshot},
+		{"record",	cmd_record},
 		{"savestate",	cmd_savestate},
 		{"loadstate",	cmd_loadstate},
 		{"quit",	cmd_quit},

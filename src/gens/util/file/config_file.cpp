@@ -43,6 +43,7 @@ using std::string;
 #include "emulator/gens.hpp"
 #include "emulator/g_main.hpp"
 #include "util/gfx/imageutil.hpp"
+#include "util/video/video_rec.hpp"
 #include "emulator/md_palette.hpp"
 #include "emulator/g_update.hpp"
 
@@ -149,6 +150,7 @@ int Config::save(const string& filename)
 	cfg.writeString("Directories", "Dump WAV Path", PathNames.Dump_WAV_Dir);
 	cfg.writeString("Directories", "Dump GYM Path", PathNames.Dump_GYM_Dir);
 	cfg.writeString("Directories", "Screenshot Path", PathNames.Screenshot_Dir);
+	cfg.writeString("Directories", "Video Path", PathNames.Video_Dir);
 	
 	// Plugin directories.
 	for (list<mdpDir_t>::iterator iter = PluginMgr::lstDirectories.begin();
@@ -336,6 +338,7 @@ int Config::save(const string& filename)
 	
 	// Miscellaneous files.
 	cfg.writeString("Options", rar_binary_key, Misc_Filenames.RAR_Binary);
+	cfg.writeString("Options", "FFmpeg Path", VRec_FFmpeg_Path);
 	
 	// Controller settings.
 	cfg.writeInt("Input", "P1.Type", (Controller_1_Type & 0x11), true, 2);
@@ -458,6 +461,7 @@ int Config::load(const string& filename, void* gameActive)
 	cfg.getString("Directories", "Dump WAV Path", PathNames.Gens_Save_Path, PathNames.Dump_WAV_Dir, sizeof(PathNames.Dump_WAV_Dir));
 	cfg.getString("Directories", "Dump GYM Path", PathNames.Gens_Save_Path, PathNames.Dump_GYM_Dir, sizeof(PathNames.Dump_GYM_Dir));
 	cfg.getString("Directories", "Screenshot Path", PathNames.Gens_Save_Path, PathNames.Screenshot_Dir, sizeof(PathNames.Screenshot_Dir));
+	cfg.getString("Directories", "Video Path", PathNames.Gens_Save_Path, PathNames.Video_Dir, sizeof(PathNames.Video_Dir));
 	
 	// Plugin directories.
 	for (list<mdpDir_t>::iterator iter = PluginMgr::lstDirectories.begin();
@@ -715,6 +719,7 @@ int Config::load(const string& filename, void* gameActive)
 	// Miscellaneous files.
 	cfg.getString("Options", rar_binary_key, rar_binary_default,
 		      Misc_Filenames.RAR_Binary, sizeof(Misc_Filenames.RAR_Binary));
+	cfg.getString("Options", "FFmpeg Path", "ffmpeg", VRec_FFmpeg_Path, sizeof(VRec_FFmpeg_Path));
 	
 	// Controller settings.
 	Controller_1_Type = cfg.getInt("Input", "P1.Type", 0x01);

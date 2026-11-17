@@ -49,6 +49,7 @@ using std::string;
 
 #include "util/sound/wave.h"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 
 #include "libgsft/gsft_byteswap.h"
 #include "macros/force_inline.h"
@@ -722,6 +723,8 @@ static FORCE_INLINE int T_gens_do_MCD_frame(void)
 		wav_dump_update();
 	if (GYM_Dumping)
 		gym_dump_update(0, 0, 0);
+	if (VRec_Recording)
+		vrec_update();
 	
 	if (VDP && Show_LED)
 		SegaCD_Display_LED();
@@ -750,10 +753,15 @@ static FORCE_INLINE int T_gens_do_MCD_frame(void)
 
 int Do_SegaCD_Frame_No_VDP(void)
 {
+	// A video recording needs every frame drawn.
+	if (VRec_Recording)
+		return T_gens_do_MCD_frame<true, false>();
 	return T_gens_do_MCD_frame<false, false>();
 }
 int Do_SegaCD_Frame_No_VDP_Cycle_Accurate(void)
 {
+	if (VRec_Recording)
+		return T_gens_do_MCD_frame<true, true>();
 	return T_gens_do_MCD_frame<false, true>();
 }
 int Do_SegaCD_Frame(void)

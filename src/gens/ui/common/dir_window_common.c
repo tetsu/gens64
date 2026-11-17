@@ -42,5 +42,6 @@ const dir_entry_t dir_window_entries[DIR_WINDOW_ENTRIES_COUNT + 1] =
 	{"WAV Dump",	PathNames.Dump_WAV_Dir},
 	{"GYM Dump",	PathNames.Dump_GYM_Dir},
 	{"Screenshots",	PathNames.Screenshot_Dir},
+	{"Videos",	PathNames.Video_Dir},
 	{NULL, NULL}
 };

@@ -41,6 +41,7 @@
 
 #include "util/sound/wave.h"
 #include "util/sound/gym.hpp"
+#include "util/video/video_rec.hpp"
 
 #include "gens_core/vdp/vdp_io.h"
 #include "gens_core/vdp/vdp_rend.h"
@@ -307,6 +308,13 @@ void Sync_Gens_Window_GraphicsMenu(void)
 	
 	// Screenshot
 	EnableMenuItem(mnuGraphics, IDM_GRAPHICS_SCREENSHOT,
+			MF_BYCOMMAND | ((Game != NULL) ? MF_ENABLED : MF_GRAYED));
+	
+	// Video recording
+	pModifyMenuU(mnuGraphics, IDM_GRAPHICS_RECORD,
+			MF_BYCOMMAND | MF_STRING, IDM_GRAPHICS_RECORD,
+			(VRec_Recording ? "Stop Video Recording" : "Start Video Recording"));
+	EnableMenuItem(mnuGraphics, IDM_GRAPHICS_RECORD,
 			MF_BYCOMMAND | ((Game != NULL) ? MF_ENABLED : MF_GRAYED));
 }
 

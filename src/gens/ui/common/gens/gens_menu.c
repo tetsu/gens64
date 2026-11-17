@@ -136,6 +136,7 @@ static const GensMenuItem_t gmiGraphics[] =
 	{IDM_SEPARATOR,			GMF_ITEM_SEPARATOR,	NULL,				NULL,	0, 0, 0},
 	{IDM_GRAPHICS_FRAMESKIP,	GMF_ITEM_SUBMENU,	"Frame Skip",			&gmiGraphics_FrameSkip[0], 0, 0, IDIM_FRAMESKIP},
 	{IDM_GRAPHICS_SCREENSHOT,	GMF_ITEM_NORMAL,	"Screenshot",			NULL,	GMAM_SHIFT, GMAK_BACKSPACE, IDIM_SCREENSHOT},
+	{IDM_GRAPHICS_RECORD,		GMF_ITEM_NORMAL,	"Start Video Recording",	NULL,	0, 0, 0},
 	{0, 0, NULL, NULL, 0, 0, 0}
 };
 
