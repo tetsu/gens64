@@ -1059,7 +1059,7 @@ void ROM::freeROM(ROM_t* ROM_MD)
 	if (GYM_Dumping)
 		gym_dump_stop();
 	if (VRec_Recording)
-		vrec_stop();
+		vrec_stop(0);
 
 	if (SegaCD_Started)
 		Stop_CD();

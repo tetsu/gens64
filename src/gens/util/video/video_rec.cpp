@@ -20,9 +20,14 @@
 
 /**
  * Every emulated frame is recorded, however fast or slow the emulation runs:
- * the picture is piped to one ffmpeg process and the sound to another, and
- * when the recording stops, a third ffmpeg run joins the two into the output
- * file without encoding them again.
+ * the picture is piped to one ffmpeg process and the sound to another. The
+ * picture is kept at its original size without loss, which is quick enough
+ * not to slow down the emulation.
+ *
+ * When the recording stops, a third ffmpeg run scales the picture up to the
+ * chosen size, encodes it, and joins it with the sound into the output file.
+ * That run can take a while for large sizes, so it goes on in the background
+ * while the emulation continues.
  *
  * The two encoders write Matroska files, which stay readable if Gens64 stops
  * in the middle of a recording.
@@ -80,16 +85,52 @@ using std::vector;
 // The picture is always this wide. Narrower modes are centered.
 #define VREC_WIDTH 320
 
-// The picture is scaled up by this much, without smoothing, before it is
-// encoded, so that the pixel edges survive the encoder's color subsampling.
-#define VREC_SCALE "2"
-
 // How long the messages stay on the screen, in milliseconds.
 #define MSG_SHORT 1500
 #define MSG_LONG 5000
 
 int VRec_Recording = 0;
 char VRec_FFmpeg_Path[GENS_PATH_MAX] = "ffmpeg";
+int VRec_Size = VREC_SIZE_1440P;
+
+// Frame size of each output size. 0 means the picture scaled up 2x.
+static const struct
+{
+	const char *name;
+	int width, height;
+} sizes[VREC_SIZE_COUNT] =
+{
+	{"2x", 0, 0},
+	{"1080p", 1920, 1080},
+	{"1440p", 2560, 1440},
+	{"4K", 3840, 2160},
+};
+
+
+const char *vrec_size_name(int size)
+{
+	if (size < 0 || size >= VREC_SIZE_COUNT)
+		size = VREC_SIZE_1440P;
+	return sizes[size].name;
+}
+
+
+int vrec_size_from_name(const char *name)
+{
+	for (int i = 0; i < VREC_SIZE_COUNT; i++)
+	{
+		const char *a = sizes[i].name;
+		const char *b = name;
+		while (*a != 0x00 && (*a | 0x20) == (*b | 0x20))
+		{
+			a++;
+			b++;
+		}
+		if (*a == 0x00 && *b == 0x00)
+			return i;
+	}
+	return -1;
+}
 
 
 /** Child processes. **/
@@ -311,6 +352,21 @@ static int child_finish(child_t *child)
 	return code;
 }
 
+
+/**
+ * child_exited(): Check whether a child has exited, without waiting.
+ * @param code Set to its exit code, as from child_finish(), if it has.
+ * @return True if it has exited. The child is then finished.
+ */
+static bool child_exited(child_t *child, int *code)
+{
+	if (child->process != NULL && WaitForSingleObject(child->process, 0) == WAIT_TIMEOUT)
+		return false;
+
+	*code = child_finish(child);
+	return true;
+}
+
 #else /* !_WIN32 */
 
 static log_handle_t open_log(const string& filename)
@@ -459,6 +515,33 @@ static int child_finish(child_t *child)
 	return code;
 }
 
+
+/**
+ * child_exited(): Check whether a child has exited, without waiting.
+ * @param code Set to its exit code, as from child_finish(), if it has.
+ * @return True if it has exited. The child is then finished.
+ */
+static bool child_exited(child_t *child, int *code)
+{
+	int status = 0;
+	pid_t rval = 0;
+	if (child->pid > 0)
+	{
+		do
+		{
+			rval = waitpid(child->pid, &status, WNOHANG);
+		} while (rval < 0 && errno == EINTR);
+		if (rval == 0)
+			return false;
+	}
+
+	// The child is gone now, so child_finish() must not wait for it.
+	*code = (rval == child->pid && WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+	child->pid = -1;
+	child_finish(child);
+	return true;
+}
+
 #endif /* _WIN32 */
 
 
@@ -486,6 +569,21 @@ static struct
 	vector<uint32_t> canvas;
 	unsigned int frames;
 } rec;
+
+
+// A finished recording that ffmpeg is making into the output file.
+typedef struct
+{
+	child_t child;
+	log_handle_t log;
+	string output;
+	string video_file;
+	string audio_file;
+	string log_file;
+} job_t;
+
+// Jobs that run in the background.
+static vector<job_t> jobs;
 
 
 static int frame_rate(void)
@@ -551,13 +649,13 @@ static vector<string> ffmpeg_command(void)
  */
 static int start_encoders(void)
 {
+	// The picture is kept as it is, without loss, until it is scaled up.
 	vector<string> args = ffmpeg_command();
 	const char *video_args[] =
 	{
 		"-f", "rawvideo", "-pix_fmt", "bgr0",
 		"-video_size", NULL, "-framerate", NULL, "-i", "-",
-		"-vf", "scale=iw*" VREC_SCALE ":ih*" VREC_SCALE ":flags=neighbor",
-		"-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+		"-c:v", "libx264rgb", "-preset", "ultrafast", "-qp", "0",
 		"-y", NULL
 	};
 	const string size = to_string(VREC_WIDTH) + "x" + to_string(rec.height);
@@ -600,12 +698,49 @@ static int start_encoders(void)
 }
 
 
-/**
- * join_streams(): Join the encoded picture and sound into the output file.
- * @return ffmpeg's exit code, or -1 if it could not be started.
- */
-static int join_streams(void)
+// VRec_Size, or the default if it is out of range.
+static int current_size(void)
 {
+	return (VRec_Size >= 0 && VRec_Size < VREC_SIZE_COUNT ? VRec_Size : VREC_SIZE_1440P);
+}
+
+
+/**
+ * scale_filter(): The filters that scale the recorded picture up to the
+ * chosen size, without smoothing, and convert it to video colors.
+ */
+static string scale_filter(void)
+{
+	const int size = current_size();
+	if (sizes[size].height == 0)
+	{
+		// Standard definition. The 2x scale keeps the pixel edges sharp
+		// through the encoder's color subsampling.
+		return "scale=iw*2:ih*2:flags=neighbor:out_color_matrix=bt601:out_range=tv,format=yuv420p";
+	}
+
+	// High definition: the largest whole-number scale that fits, centered
+	// in the frame. YouTube, for one, gives more detail and 60 fps only to
+	// videos of 720 lines or more.
+	int scale = sizes[size].height / rec.height;
+	if (scale * VREC_WIDTH > sizes[size].width)
+		scale = sizes[size].width / VREC_WIDTH;
+
+	return "scale=" + to_string(VREC_WIDTH * scale) + ":" + to_string(rec.height * scale) +
+	       ":flags=neighbor:out_color_matrix=bt709:out_range=tv,format=yuv420p,pad=" +
+	       to_string(sizes[size].width) + ":" + to_string(sizes[size].height) + ":-1:-1";
+}
+
+
+/**
+ * start_output(): Start making the output file from the recording.
+ * @param job Filled in from the recording.
+ * @return 0 on success; -1 if ffmpeg could not be started.
+ */
+static int start_output(job_t *job)
+{
+	const bool hd = (sizes[current_size()].height != 0);
+
 	vector<string> args = ffmpeg_command();
 	args.push_back("-nostdin");
 	args.push_back("-i");
@@ -622,15 +757,29 @@ static int join_streams(void)
 		args.push_back("-map");
 		args.push_back("1:a:0");
 	}
-	args.push_back("-c");
-	args.push_back("copy");
+
+	// Every frame was recorded, at a fixed rate.
+	const char *video_args[] =
+	{
+		"-vf", NULL, "-r", NULL,
+		"-c:v", "libx264", "-preset", "fast", "-crf", "16",
+		"-colorspace", NULL, "-color_primaries", NULL, "-color_trc", NULL, "-color_range", "tv",
+		"-c:a", "copy",
+	};
+	const string filter = scale_filter();
+	const string fps = to_string(rec.fps);
+	const char *colors = (hd ? "bt709" : (rec.fps == 50 ? "bt470bg" : "smpte170m"));
+	video_args[1] = filter.c_str();
+	video_args[3] = fps.c_str();
+	video_args[11] = colors;
+	video_args[13] = colors;
+	video_args[15] = (hd ? "bt709" : "smpte170m");
+	args.insert(args.end(), video_args, video_args + (sizeof(video_args) / sizeof(video_args[0])));
 
 	if (is_mp4(rec.output))
 	{
-		// Matroska keeps times in milliseconds. A track counted in frames
-		// rounds them back to exact frame times.
 		args.push_back("-video_track_timescale");
-		args.push_back(to_string(rec.fps));
+		args.push_back(fps);
 		args.push_back("-movflags");
 		args.push_back("+faststart");
 	}
@@ -638,10 +787,47 @@ static int join_streams(void)
 	args.push_back("-y");
 	args.push_back(rec.output);
 
-	child_t child;
-	if (child_start(&child, args, rec.log) != 0)
-		return -1;
-	return child_finish(&child);
+	job->log = rec.log;
+	job->output = rec.output;
+	job->video_file = rec.video_file;
+	job->audio_file = rec.audio_file;
+	job->log_file = rec.log_file;
+	return child_start(&job->child, args, job->log);
+}
+
+
+/**
+ * end_job(): Clean up after a finished job, and say how it went.
+ * @param code ffmpeg's exit code.
+ * @param reason If not NULL, why the recording stopped on its own.
+ * @return 0 on success; -1 on error.
+ */
+static int end_job(job_t *job, int code, const char *reason)
+{
+	close_log(job->log);
+	job->log = NO_LOG;
+
+	string msg;
+	int rval = 0;
+	if (code == 0)
+	{
+		unlink(job->video_file.c_str());
+		unlink(job->audio_file.c_str());
+		unlink(job->log_file.c_str());
+		msg = "Video saved: " + base_name(job->output);
+	}
+	else
+	{
+		msg = "Video recording failed: ffmpeg could not write the video file. See " +
+		      base_name(job->log_file) + ".";
+		rval = failed("Video recording failed: ffmpeg could not write the video file. See " +
+			      job->log_file + ".");
+	}
+
+	if (reason != NULL)
+		msg = string(reason) + " " + msg;
+	vdraw_text_write(msg.c_str(), (rval == 0 ? MSG_SHORT : MSG_LONG));
+	return rval;
 }
 
 
@@ -814,9 +1000,10 @@ int vrec_start(const char *filename)
  * @param error If not NULL, the recording failed for this reason, and the
  * files are kept as they are.
  * @param reason If not NULL, why the recording stopped on its own.
+ * @param wait If true, wait until the output file is made.
  * @return 0 on success; -1 on error.
  */
-static int finish(const char *error, const char *reason)
+static int finish(const char *error, const char *reason, bool wait)
 {
 	VRec_Recording = 0;
 
@@ -836,6 +1023,7 @@ static int finish(const char *error, const char *reason)
 
 	string msg;
 	int rval = 0;
+	job_t job;
 	if (error == NULL && code == 0 && rec.frames == 0)
 	{
 		// Nothing to keep.
@@ -846,26 +1034,32 @@ static int finish(const char *error, const char *reason)
 		msg = "No frames were recorded.";
 		rval = failed(msg);
 	}
-	else
+	else if (error == NULL && code == 0 && start_output(&job) == 0)
 	{
-		if (error == NULL && code != 0)
-			error = "ffmpeg reported an error";
-		if (error == NULL && join_streams() != 0)
-			error = "ffmpeg could not write the video file";
-		close_log(rec.log);
-
-		if (error == NULL)
+		// The job owns the log now.
+		rec.log = NO_LOG;
+		if (wait)
 		{
-			unlink(rec.video_file.c_str());
-			unlink(rec.audio_file.c_str());
-			unlink(rec.log_file.c_str());
-			msg = "Video saved: " + base_name(rec.output);
+			rval = end_job(&job, child_finish(&job.child), reason);
 		}
 		else
 		{
-			msg = string("Video recording failed: ") + error + ". See " + base_name(rec.log_file) + ".";
-			rval = failed(string("Video recording failed: ") + error + ". See " + rec.log_file + ".");
+			jobs.push_back(job);
+			msg = string("Making the ") + vrec_size_name(current_size()) + " video...";
+			if (reason != NULL)
+				msg = string(reason) + " " + msg;
+			vdraw_text_write(msg.c_str(), MSG_SHORT);
 		}
+		Sync_Gens_Window_GraphicsMenu();
+		return rval;
+	}
+	else
+	{
+		if (error == NULL)
+			error = (code != 0 ? "ffmpeg reported an error" : "ffmpeg could not write the video file");
+		close_log(rec.log);
+		msg = string("Video recording failed: ") + error + ". See " + base_name(rec.log_file) + ".";
+		rval = failed(string("Video recording failed: ") + error + ". See " + rec.log_file + ".");
 	}
 	rec.log = NO_LOG;
 
@@ -877,13 +1071,42 @@ static int finish(const char *error, const char *reason)
 }
 
 
-int vrec_stop(void)
+int vrec_stop(int wait)
 {
 	last_error.clear();
 	if (!VRec_Recording)
 		return failed("No video is being recorded.");
 
-	return finish(NULL, NULL);
+	return finish(NULL, NULL, (wait != 0));
+}
+
+
+void vrec_poll(void)
+{
+	for (size_t i = 0; i < jobs.size(); )
+	{
+		int code;
+		if (!child_exited(&jobs[i].child, &code))
+		{
+			i++;
+			continue;
+		}
+
+		job_t job = jobs[i];
+		jobs.erase(jobs.begin() + i);
+		end_job(&job, code, NULL);
+	}
+}
+
+
+void vrec_end(void)
+{
+	if (VRec_Recording)
+		finish(NULL, NULL, true);
+
+	for (size_t i = 0; i < jobs.size(); i++)
+		end_job(&jobs[i], child_finish(&jobs[i].child), NULL);
+	jobs.clear();
 }
 
 
@@ -898,7 +1121,7 @@ void vrec_update(void)
 	    (has_audio && (audio_seg_length != rec.seg_length ||
 			   (audio_get_stereo() ? 2 : 1) != rec.channels)))
 	{
-		finish(NULL, "The frame rate or sound settings changed.");
+		finish(NULL, "The frame rate or sound settings changed.", false);
 		return;
 	}
 
@@ -915,7 +1138,7 @@ void vrec_update(void)
 
 	if (!ok)
 	{
-		finish("ffmpeg stopped", NULL);
+		finish("ffmpeg stopped", NULL, false);
 		return;
 	}
 

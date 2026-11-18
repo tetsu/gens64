@@ -168,7 +168,9 @@ class Gens64:
         return text_result("Recording to " + self.send(line))
 
     def record_stop(self, args):
-        return text_result("Saved " + self.send("record stop"))
+        # The reply comes when the video file is made, which takes a while
+        # for long recordings at large sizes.
+        return text_result("Saved " + self.send("record stop", timeout=3600.0))
 
     def simple(self, command, args=None, name=None):
         """A command with at most one free-form argument."""
@@ -229,7 +231,8 @@ TOOLS = {
                           "the video folder.",
                           schema({"path": {"type": "string", "description": "Absolute path of the .mp4 file."}}),
                           Gens64.record_start),
-    "gens_record_stop": ("Stop recording and finish the video file. Returns its path.",
+    "gens_record_stop": ("Stop recording and make the video file. Returns its path once the file "
+                         "is done, which can take about as long as the recording for large sizes.",
                          schema(), Gens64.record_stop),
     "gens_savestate": ("Save the emulator state to a file.", schema(FILE_PROPERTY, ["path"]),
                        lambda g, a: g.simple("savestate", a, "path")),

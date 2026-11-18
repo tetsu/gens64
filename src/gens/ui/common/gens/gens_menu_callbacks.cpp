@@ -473,8 +473,9 @@ static int gens_menu_callback_GraphicsMenu(uint16_t menuID, uint16_t state)
 			}
 			else
 			{
-				// Failures are shown on the screen.
-				vrec_stop();
+				// The video is made in the background, and
+				// the result is shown on the screen.
+				vrec_stop(0);
 			}
 			break;
 		

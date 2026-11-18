@@ -134,7 +134,8 @@ Commands:
   record start [<file>]  Start recording a video (see 1.3). Without a
                          file, a numbered .mp4 goes to the video folder.
                          The reply names the file.
-  record stop            Finish the video file. The reply names it.
+  record stop            Finish the video file. The reply names it, and
+                         comes when the file is done.
   savestate <file>
   loadstate <file>       Use full paths. Relative paths are based on
                          the Gens64 save folder or working folder.
@@ -171,15 +172,29 @@ faster than real time. While recording, frame skip is ignored.
 Frames are only recorded while the game runs: pausing pauses the
 video, and with the remote control, only stepped frames are recorded.
 
-- Picture: 320 pixels wide (narrower modes are centered), 224 or 240
-  lines, scaled up 2x without smoothing, H.264, 60 fps (50 for PAL).
-  On-screen messages and the FPS counter are not recorded.
+- Picture: H.264, 60 fps (50 for PAL). The game's 320 pixels (narrower
+  modes are centered) by 224 or 240 lines are scaled up without
+  smoothing, by the largest whole number that fits the video size, and
+  centered on black. On-screen messages and the FPS counter are not
+  recorded.
+- Video size: "Video Size" in the [Options] section of gens.cfg.
+    1440p  2560x1440, the game scaled 6x. (The default.)
+    4K     3840x2160, scaled 9x.
+    1080p  1920x1080, scaled 4x.
+    2x     640x448 (or 640x480), scaled 2x.
+  For YouTube, use 1440p or 4K: YouTube gives videos of these sizes
+  much more detail, and plays only videos of 720 lines or more at
+  60 fps, so smaller videos come out blurry.
 - Sound: AAC, 48 kHz.
 - Files are named after the ROM with a number, like screenshots, and
   saved in the video folder (Options > Directories).
-- While recording, ffmpeg writes <name>.video.mkv and
-  <name>.audio.mka, and joins them into <name>.mp4 when the
-  recording stops. If ffmpeg fails, those files and its messages in
+- While recording, ffmpeg writes the picture without loss to
+  <name>.video.mkv and the sound to <name>.audio.mka. When the
+  recording stops, ffmpeg scales the picture up and makes <name>.mp4
+  in the background, while you keep playing; a message says when the
+  video is saved. For long recordings at large sizes this takes a
+  while (4K can take about as long as the recording), and Gens64 waits
+  for it when you exit. If ffmpeg fails, those files and its messages in
   <name>.log are kept.
 - The recording stops on its own when the game is closed, or when
   the frame rate or the sound settings change.

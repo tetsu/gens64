@@ -770,7 +770,8 @@ static void cmd_record(char *args)
 	}
 	else if (action != NULL && !strcmp(action, "stop") && *rest_of_line(args) == 0x00)
 	{
-		if (vrec_stop() != 0)
+		// The reply comes when the file is done.
+		if (vrec_stop(1) != 0)
 			reply("ERR %s", vrec_last_error());
 		else
 			reply("OK %s", vrec_filename());

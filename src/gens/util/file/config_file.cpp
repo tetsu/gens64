@@ -339,6 +339,7 @@ int Config::save(const string& filename)
 	// Miscellaneous files.
 	cfg.writeString("Options", rar_binary_key, Misc_Filenames.RAR_Binary);
 	cfg.writeString("Options", "FFmpeg Path", VRec_FFmpeg_Path);
+	cfg.writeString("Options", "Video Size", vrec_size_name(VRec_Size));
 	
 	// Controller settings.
 	cfg.writeInt("Input", "P1.Type", (Controller_1_Type & 0x11), true, 2);
@@ -720,6 +721,11 @@ int Config::load(const string& filename, void* gameActive)
 	cfg.getString("Options", rar_binary_key, rar_binary_default,
 		      Misc_Filenames.RAR_Binary, sizeof(Misc_Filenames.RAR_Binary));
 	cfg.getString("Options", "FFmpeg Path", "ffmpeg", VRec_FFmpeg_Path, sizeof(VRec_FFmpeg_Path));
+	char video_size[16];
+	cfg.getString("Options", "Video Size", vrec_size_name(VREC_SIZE_1440P), video_size, sizeof(video_size));
+	VRec_Size = vrec_size_from_name(video_size);
+	if (VRec_Size < 0)
+		VRec_Size = VREC_SIZE_1440P;
 	
 	// Controller settings.
 	Controller_1_Type = cfg.getInt("Input", "P1.Type", 0x01);

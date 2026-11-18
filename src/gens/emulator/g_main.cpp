@@ -95,6 +95,9 @@ using std::string;
 // Video effects.
 #include "video/v_effects.hpp"
 
+// Video recording.
+#include "util/video/video_rec.hpp"
+
 #ifdef GENS_OS_WIN32
 #include "control_win32.hpp"
 #endif
@@ -297,6 +300,10 @@ int Init(void)
 void End_All(void)
 {
 	ROM::freeROM(Game);
+	
+	// Finish the videos still being made.
+	vrec_end();
+	
 	YM2612_End();
 #ifdef GENS_CDROM
 	End_CD_Driver();
@@ -429,6 +436,9 @@ inline void GensLoopIteration(void)
 {
 	// Update the UI.
 	GensUI::update();
+	
+	// Videos made in the background.
+	vrec_poll();
 	
 	// Update physical controller inputs.
 	input_update();
