@@ -494,6 +494,10 @@ static void cmd_load(char *args)
 	if (audio_get_gym_playing())
 		gym_play_stop();
 
+	// Closing the game stops a recording. Finish the video before replying.
+	if (VRec_Recording)
+		vrec_stop(1);
+
 	const int started = ROM::openROM(filename);
 	Sync_Gens_Window();
 	frames_run = 0;
@@ -511,6 +515,10 @@ static void cmd_load(char *args)
 static void cmd_close(char *args)
 {
 	GSFT_UNUSED_PARAMETER(args);
+
+	// Closing the game stops a recording. Finish the video before replying.
+	if (VRec_Recording)
+		vrec_stop(1);
 
 	ROM::freeROM(Game);
 	Sync_Gens_Window();

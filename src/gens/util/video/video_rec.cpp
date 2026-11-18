@@ -107,11 +107,16 @@ static const struct
 };
 
 
+// The size, or the default if it is out of range.
+static int valid_size(int size)
+{
+	return (size >= 0 && size < VREC_SIZE_COUNT ? size : VREC_SIZE_1440P);
+}
+
+
 const char *vrec_size_name(int size)
 {
-	if (size < 0 || size >= VREC_SIZE_COUNT)
-		size = VREC_SIZE_1440P;
-	return sizes[size].name;
+	return sizes[valid_size(size)].name;
 }
 
 
@@ -119,14 +124,7 @@ int vrec_size_from_name(const char *name)
 {
 	for (int i = 0; i < VREC_SIZE_COUNT; i++)
 	{
-		const char *a = sizes[i].name;
-		const char *b = name;
-		while (*a != 0x00 && (*a | 0x20) == (*b | 0x20))
-		{
-			a++;
-			b++;
-		}
-		if (*a == 0x00 && *b == 0x00)
+		if (!strcasecmp(sizes[i].name, name))
 			return i;
 	}
 	return -1;
@@ -260,9 +258,10 @@ static void close_log(log_handle_t log)
 
 /**
  * child_start(): Start a program with a pipe to its stdin.
+ * @param background If true, run it at a lower priority than Gens64.
  * @return 0 on success; -1 on error.
  */
-static int child_start(child_t *child, const vector<string>& args, log_handle_t log)
+static int child_start(child_t *child, const vector<string>& args, log_handle_t log, bool background)
 {
 	*child = no_child;
 
@@ -290,7 +289,8 @@ static int child_start(child_t *child, const vector<string>& args, log_handle_t 
 
 	PROCESS_INFORMATION pi;
 	const BOOL started = (wcmd != NULL &&
-			      CreateProcessW(NULL, wcmd, NULL, NULL, TRUE, CREATE_NO_WINDOW,
+			      CreateProcessW(NULL, wcmd, NULL, NULL, TRUE,
+					     CREATE_NO_WINDOW | (background ? BELOW_NORMAL_PRIORITY_CLASS : 0),
 					     NULL, NULL, &si, &pi));
 	const DWORD err = GetLastError();
 	free(wcmd);
@@ -387,9 +387,10 @@ static void close_log(log_handle_t log)
 
 /**
  * child_start(): Start a program with a pipe to its stdin.
+ * @param background If true, run it at a lower priority than Gens64.
  * @return 0 on success; -1 on error.
  */
-static int child_start(child_t *child, const vector<string>& args, log_handle_t log)
+static int child_start(child_t *child, const vector<string>& args, log_handle_t log, bool background)
 {
 	*child = no_child;
 
@@ -428,6 +429,11 @@ static int child_start(child_t *child, const vector<string>& args, log_handle_t 
 		}
 		if (data[0] > STDERR_FILENO)
 			close(data[0]);
+		if (background)
+		{
+			int ignored_nice = nice(10);
+			(void)ignored_nice;
+		}
 
 		execvp(argv[0], &argv[0]);
 
@@ -665,7 +671,7 @@ static int start_encoders(void)
 	video_args[sizeof(video_args) / sizeof(video_args[0]) - 1] = rec.video_file.c_str();
 	args.insert(args.end(), video_args, video_args + (sizeof(video_args) / sizeof(video_args[0])));
 
-	if (child_start(&rec.video, args, rec.log) != 0)
+	if (child_start(&rec.video, args, rec.log, false) != 0)
 		return -1;
 
 	if (!rec.has_audio)
@@ -688,7 +694,7 @@ static int start_encoders(void)
 	audio_args[sizeof(audio_args) / sizeof(audio_args[0]) - 1] = rec.audio_file.c_str();
 	args.insert(args.end(), audio_args, audio_args + (sizeof(audio_args) / sizeof(audio_args[0])));
 
-	if (child_start(&rec.audio, args, rec.log) != 0)
+	if (child_start(&rec.audio, args, rec.log, false) != 0)
 	{
 		child_finish(&rec.video);
 		return -1;
@@ -698,20 +704,13 @@ static int start_encoders(void)
 }
 
 
-// VRec_Size, or the default if it is out of range.
-static int current_size(void)
-{
-	return (VRec_Size >= 0 && VRec_Size < VREC_SIZE_COUNT ? VRec_Size : VREC_SIZE_1440P);
-}
-
-
 /**
  * scale_filter(): The filters that scale the recorded picture up to the
  * chosen size, without smoothing, and convert it to video colors.
  */
 static string scale_filter(void)
 {
-	const int size = current_size();
+	const int size = valid_size(VRec_Size);
 	if (sizes[size].height == 0)
 	{
 		// Standard definition. The 2x scale keeps the pixel edges sharp
@@ -739,7 +738,7 @@ static string scale_filter(void)
  */
 static int start_output(job_t *job)
 {
-	const bool hd = (sizes[current_size()].height != 0);
+	const bool hd = (sizes[valid_size(VRec_Size)].height != 0);
 
 	vector<string> args = ffmpeg_command();
 	args.push_back("-nostdin");
@@ -792,7 +791,8 @@ static int start_output(job_t *job)
 	job->video_file = rec.video_file;
 	job->audio_file = rec.audio_file;
 	job->log_file = rec.log_file;
-	return child_start(&job->child, args, job->log);
+	// The emulation goes on meanwhile, and comes first.
+	return child_start(&job->child, args, job->log, true);
 }
 
 
@@ -1045,7 +1045,7 @@ static int finish(const char *error, const char *reason, bool wait)
 		else
 		{
 			jobs.push_back(job);
-			msg = string("Making the ") + vrec_size_name(current_size()) + " video...";
+			msg = string("Making the ") + vrec_size_name(VRec_Size) + " video...";
 			if (reason != NULL)
 				msg = string(reason) + " " + msg;
 			vdraw_text_write(msg.c_str(), MSG_SHORT);
@@ -1103,6 +1103,13 @@ void vrec_end(void)
 {
 	if (VRec_Recording)
 		finish(NULL, NULL, true);
+
+	if (!jobs.empty())
+	{
+		// This can take a while, so say why Gens64 is still here.
+		vdraw_text_write("Finishing the video before exiting...", MSG_LONG);
+		vdraw_flip(1);
+	}
 
 	for (size_t i = 0; i < jobs.size(); i++)
 		end_job(&jobs[i], child_finish(&jobs[i].child), NULL);
