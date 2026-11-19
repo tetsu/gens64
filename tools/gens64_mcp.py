@@ -107,7 +107,8 @@ class Gens64:
             raise ToolError("this server was started without --exe, so it can't launch Gens64")
 
         command = [self.exe, "--control-pipe", self.pipe_name]
-        if not args.get("visible"):
+        visible = bool(args.get("visible"))
+        if not visible:
             command.append("--hidden")
         if args.get("rom"):
             command.append(clean(args["rom"]))
@@ -124,7 +125,7 @@ class Gens64:
             if process.poll() is not None:
                 raise ToolError("Gens64 exited at startup with code %d" % process.returncode)
             if self.is_running():
-                return text_result("Gens64 started" + ("." if args.get("visible") else " in the background."))
+                return text_result("Gens64 started" + ("." if visible else " in the background."))
             time.sleep(0.2)
         raise ToolError("Gens64 started but its control pipe did not open")
 

@@ -1092,6 +1092,10 @@ void control_set_visible(int visible)
 		}
 		if (gens_window)
 			ShowWindow(gens_window, SW_HIDE);
+
+		// Hiding the window deactivates it, which pauses the game when
+		// Auto Pause is on. A hidden Gens keeps running.
+		Settings.Active = 1;
 		return;
 	}
 

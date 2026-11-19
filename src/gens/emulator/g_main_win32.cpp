@@ -523,8 +523,15 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	check_startup_mode(startup);
 	
 	// Open the remote control pipe, if requested.
-	if (startup->control_pipe[0] != 0x00)
-		control_init(startup->control_pipe);
+	// A hidden Gens that can't be reached would run unseen until it is killed,
+	// so it exits instead.
+	int exit_code = 0;
+	if (startup->control_pipe[0] != 0x00 &&
+	    control_init(startup->control_pipe) != 0 && start_hidden)
+	{
+		fprintf(stderr, "Could not open the control pipe '%s'.\n", startup->control_pipe);
+		exit_code = 1;
+	}
 	
 	free(startup);
 	
@@ -542,7 +549,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	}
 	
 	// Run the Gens Main Loop.
-	GensMainLoop();
+	if (exit_code == 0)
+		GensMainLoop();
 	
 	audio_clear_sound_buffer();
 	
@@ -586,6 +594,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	// Shut down the Win32 Unicode Translation Layer.
 	w32u_end();
 	
-	TerminateProcess(GetCurrentProcess(), 0); //Modif N
-	return 0;
+	TerminateProcess(GetCurrentProcess(), exit_code); //Modif N
+	return exit_code;
 }
