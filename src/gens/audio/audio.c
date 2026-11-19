@@ -89,6 +89,7 @@ static BOOL	audio_enabled = TRUE;
 static BOOL	audio_stereo = TRUE;
 static BOOL	audio_gym_playing = FALSE;
 static int	audio_volume = 100;
+static BOOL	audio_muted = FALSE;
 
 
 /**
@@ -265,6 +266,16 @@ void audio_set_volume(const int new_volume)
 }
 
 
+BOOL audio_get_muted(void)
+{
+	return audio_muted;
+}
+void audio_set_muted(const BOOL new_muted)
+{
+	audio_muted = (new_muted ? TRUE : FALSE);
+}
+
+
 /**
  * audio_apply_volume(): Apply the master volume to the current sound segment.
  * This is only done for live output, so WAV dumps stay at full volume.
@@ -272,6 +283,13 @@ void audio_set_volume(const int new_volume)
 void audio_apply_volume(void)
 {
 	int i;
+	
+	if (audio_muted)
+	{
+		memset(Seg_L, 0x00, audio_seg_length * sizeof(Seg_L[0]));
+		memset(Seg_R, 0x00, audio_seg_length * sizeof(Seg_R[0]));
+		return;
+	}
 	
 	if (audio_volume == 100)
 		return;

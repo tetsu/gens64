@@ -68,6 +68,7 @@ using std::string;
 #include "util/sound/gym.hpp"
 #include "util/video/video_rec.hpp"
 #include "video/vdraw.h"
+#include "gens/gens_window.h"
 #include "gens/gens_window_sync.hpp"
 #include "ui/gens_ui.hpp"
 
@@ -117,6 +118,12 @@ static bool rx_discard = false;
 // Emulation state. It stays in place when the client disconnects,
 // so that each command can come from a separate client connection.
 static bool held = false;
+
+// The window is hidden with --hidden or the hide command.
+static bool window_visible = true;
+
+// Full screen was turned off while the window was hidden.
+static bool restore_fullscreen = false;
 static unsigned int pending_frames = 0;
 static unsigned int frames_run = 0;
 
@@ -445,7 +452,7 @@ static void cmd_help(char *args)
 {
 	GSFT_UNUSED_PARAMETER(args);
 	reply("OK ping status load close hold resume step reset pad read write "
-	      "screenshot record savestate loadstate quit help");
+	      "screenshot record show hide savestate loadstate quit help");
 }
 
 
@@ -470,8 +477,9 @@ static void cmd_status(char *args)
 	else
 		system = "md";
 
-	reply("OK system=%s held=%d paused=%d recording=%d frames=%u rom=%s",
-	      system, (held ? 1 : 0), (Settings.Paused ? 1 : 0), (VRec_Recording ? 1 : 0), frames_run,
+	reply("OK system=%s held=%d paused=%d recording=%d visible=%d frames=%u rom=%s",
+	      system, (held ? 1 : 0), (Settings.Paused ? 1 : 0), (VRec_Recording ? 1 : 0),
+	      control_is_visible(), frames_run,
 	      (Game != NULL ? ROM_Filename : ""));
 }
 
@@ -827,6 +835,22 @@ static void cmd_loadstate(char *args)
 }
 
 
+static void cmd_show(char *args)
+{
+	GSFT_UNUSED_PARAMETER(args);
+	control_set_visible(1);
+	reply("OK");
+}
+
+
+static void cmd_hide(char *args)
+{
+	GSFT_UNUSED_PARAMETER(args);
+	control_set_visible(0);
+	reply("OK");
+}
+
+
 static void cmd_quit(char *args)
 {
 	GSFT_UNUSED_PARAMETER(args);
@@ -858,6 +882,8 @@ static void handle_line(char *line)
 		{"write",	cmd_write},
 		{"screenshot",	cmd_screenshot},
 		{"record",	cmd_record},
+		{"show",	cmd_show},
+		{"hide",	cmd_hide},
 		{"savestate",	cmd_savestate},
 		{"loadstate",	cmd_loadstate},
 		{"quit",	cmd_quit},
@@ -876,7 +902,7 @@ static void handle_line(char *line)
 			// the client. Errors are reported in the reply instead.
 			log_msgbox_disabled = 1;
 			commands[i].fn(args);
-			log_msgbox_disabled = 0;
+			log_msgbox_disabled = !window_visible;
 			return;
 		}
 	}
@@ -1037,7 +1063,7 @@ int control_update(void)
 		pending_frames--;
 		frames_run++;
 	}
-	log_msgbox_disabled = 0;
+	log_msgbox_disabled = !window_visible;
 
 	vdraw_flip(1);
 
@@ -1048,8 +1074,56 @@ int control_update(void)
 }
 
 
+void control_set_visible(int visible)
+{
+	window_visible = (visible != 0);
+
+	// Nobody is there to hear the sound or answer a message box.
+	audio_set_muted(!window_visible);
+	log_msgbox_disabled = !window_visible;
+
+	if (!window_visible)
+	{
+		// A full-screen window would still take over the display.
+		if (vdraw_get_fullscreen())
+		{
+			restore_fullscreen = true;
+			vdraw_set_fullscreen(FALSE);
+		}
+		if (gens_window)
+			ShowWindow(gens_window, SW_HIDE);
+		return;
+	}
+
+	if (gens_window)
+	{
+		ShowWindow(gens_window, SW_SHOW);
+		SetForegroundWindow(gens_window);
+	}
+	if (restore_fullscreen)
+	{
+		restore_fullscreen = false;
+		vdraw_set_fullscreen(TRUE);
+	}
+}
+
+
+int control_is_visible(void)
+{
+	return (window_visible ? 1 : 0);
+}
+
+
 void control_end(void)
 {
+	// Save the full screen setting as it was before the window was hidden.
+	// (Gens has stopped running, so this only sets the property.)
+	if (restore_fullscreen)
+	{
+		restore_fullscreen = false;
+		vdraw_set_fullscreen(TRUE);
+	}
+
 	if (hPipe == INVALID_HANDLE_VALUE)
 		return;
 

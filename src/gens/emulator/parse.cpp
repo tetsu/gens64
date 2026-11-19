@@ -267,6 +267,7 @@ enum optBarg_enum
 
 #if defined(GENS_OS_WIN32)
 static const char opt_control_pipe[] = "control-pipe";
+static const char opt_hidden[] = "hidden";
 #endif
 
 // Compile-time check that opt1arg_str[] and opt1arg_enum match.
@@ -350,6 +351,7 @@ static const struct option long_options[] =
 	LONGOPT_BARG(OPTB_AUTOPAUSE),
 #if defined(GENS_OS_WIN32)
 	{opt_control_pipe, required_argument, NULL, 0},
+	{opt_hidden, no_argument, NULL, 0},
 #endif
 	{NULL, 0, NULL, 0}
 };
@@ -421,6 +423,8 @@ static void _usage(const char *argv0, int status)
 	
 #if defined(GENS_OS_WIN32)
 	fprintf(stderr, "--%s [name]: Enable remote control on the pipe \\\\.\\pipe\\name\n", opt_control_pipe);
+	fprintf(stderr, "--%s: Run without showing the window or playing sound (needs --%s)\n",
+		opt_hidden, opt_control_pipe);
 #endif
 	
 	exit(status);
@@ -537,6 +541,7 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 #endif
 #if defined(GENS_OS_WIN32)
 	startup->control_pipe[0] = 0x00;
+	startup->hidden = 0;
 #endif
 	
 	while (1)
@@ -663,6 +668,10 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		{
 			strlcpy(startup->control_pipe, optarg, sizeof(startup->control_pipe));
 		}
+		else if (!strcmp(long_options[option_index].name, opt_hidden))
+		{
+			startup->hidden = 1;
+		}
 #endif
 		else if (!strcmp(long_options[option_index].name, opt0arg_str[OPT0_HELP].option))
 		{
@@ -696,6 +705,15 @@ Gens_StartupInfo_t* parse_args(int argc, char *argv[])
 		Brightness_Level = 0;
 	else if (Brightness_Level > 200)
 		Brightness_Level = 200;
+	
+#if defined(GENS_OS_WIN32)
+	// A hidden Gens can only be reached through the control pipe.
+	if (startup->hidden && startup->control_pipe[0] == 0x00)
+	{
+		fprintf(stderr, "--%s needs --%s.\n", opt_hidden, opt_control_pipe);
+		error = 1;
+	}
+#endif
 	
 	if (optind < argc - 1 || error)
 	{

@@ -487,6 +487,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	
 	Init_Genesis_Bios();
 	
+	// A hidden Gens plays no sound and doesn't go full screen.
+	const bool start_hidden = (startup->hidden != 0);
+	if (start_hidden)
+		control_set_visible(0);
+	
 	// Initialize Gens.
 	if (!Init())
 		return 0;
@@ -529,9 +534,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	// Synchronize the Gens window.
 	Sync_Gens_Window();
 	
-	// Show the Gens window.
-	ShowWindow(gens_window, nCmdShow);
-	SetFocus(gens_window);
+	// Show the Gens window, unless it should stay hidden.
+	if (!start_hidden)
+	{
+		ShowWindow(gens_window, nCmdShow);
+		SetFocus(gens_window);
+	}
 	
 	// Run the Gens Main Loop.
 	GensMainLoop();
@@ -542,10 +550,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 #ifndef PACKAGE_NAME
 #error PACKAGE_NAME not defined!
 #endif
+	// Closing the control pipe also restores settings changed while hidden.
+	control_end();
+	
 	string cfg_filename = string(PathNames.Gens_Save_Path) + PACKAGE_NAME + ".cfg";
 	Config::save(cfg_filename);
-	
-	control_end();
 	End_All();
 	DestroyWindow(gens_window);
 	

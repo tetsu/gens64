@@ -129,6 +129,10 @@ void	audio_set_stereo(const BOOL new_stereo);
 int	audio_get_volume(void);
 void	audio_set_volume(const int new_volume);
 
+// Muted: nothing is played, but recordings and dumps still get the sound.
+BOOL	audio_get_muted(void);
+void	audio_set_muted(const BOOL new_muted);
+
 // Apply the master volume to the current sound segment.
 void	audio_apply_volume(void);
 

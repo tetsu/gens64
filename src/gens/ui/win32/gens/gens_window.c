@@ -184,19 +184,20 @@ void gens_window_reinit(void)
 		while (ShowCursor(FALSE) >= 0) { }
 		while (ShowCursor(TRUE) < 1) { }
 		
-		// Adjust the window style.
+		// Adjust the window style. WS_VISIBLE is left as it is, so that
+		// a hidden window (--hidden) stays hidden.
 		lStyle = pGetWindowLongPtrU(gens_window, GWL_STYLE);
 		if (vdraw_cur_backend_flags & VDRAW_BACKEND_FLAG_WINRESIZE)
 		{
 			// Backend supports resizable windows.
 			lStyle &= ~WS_POPUPWINDOW;
-			lStyle |= WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE | WS_CLIPSIBLINGS;
+			lStyle |= WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
 		}
 		else
 		{
 			// Backend does not support resizable windows.
 			lStyle &= ~WS_OVERLAPPEDWINDOW;
-			lStyle |= WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE | WS_CLIPSIBLINGS;
+			lStyle |= WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_CLIPSIBLINGS;
 		}
 		pSetWindowLongPtrU(gens_window, GWL_STYLE, lStyle);
 		

@@ -55,6 +55,7 @@ typedef struct _Gens_StartupInfo_t
 #endif
 #if defined(GENS_OS_WIN32)
 	char control_pipe[128];
+	int hidden;	// Start without showing the window. (Needs control_pipe.)
 #endif
 } Gens_StartupInfo_t;
 

@@ -102,6 +102,15 @@ unless Gens64 is started with the --control-pipe option:
 
   gens.exe --control-pipe gens64
 
+With --hidden as well, Gens64 runs in the background: no window, no
+taskbar button, no sound, and no message boxes. Screenshots and video
+recordings work the same, and recordings still have the sound. The
+show and hide commands show and hide the window while it runs. (While
+hidden, full screen is turned off; it comes back with show, and is
+saved as it was.)
+
+  gens.exe --control-pipe gens64 --hidden
+
 Only the user who started Gens64 and administrators can send commands,
 and only from the same computer. Send commands with
 tools/gens64ctl.py, or write one command per line to
@@ -136,6 +145,8 @@ Commands:
                          The reply names the file.
   record stop            Finish the video file. The reply names it, and
                          comes when the file is done.
+  show                   Show the window, and play the sound again.
+  hide                   Hide the window, as with --hidden.
   savestate <file>
   loadstate <file>       Use full paths. Relative paths are based on
                          the Gens64 save folder or working folder.
@@ -147,7 +158,8 @@ While the emulation is held, the window title says so.
 
 MCP: tools/gens64_mcp.py offers the same commands as tools for MCP
 clients such as Claude. It needs Python and nothing else. With --exe
-it can also launch Gens64. For example, with Claude Code:
+it can also launch Gens64, in the background unless the client asks
+for the window. For example, with Claude Code:
 
   claude mcp add gens64 -- python C:\path\tools\gens64_mcp.py
       --exe C:\path\gens.exe

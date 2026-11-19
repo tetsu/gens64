@@ -40,4 +40,15 @@ int control_update(void);
  */
 void control_end(void);
 
+/**
+ * control_set_visible(): Show or hide the Gens window.
+ * While it is hidden, no sound is played and no message boxes are shown,
+ * since nobody is there to hear or answer them.
+ * @param visible Non-zero to show the window.
+ */
+void control_set_visible(int visible);
+
+// Non-zero if the Gens window is shown.
+int control_is_visible(void);
+
 #endif /* GENS_CONTROL_WIN32_HPP */

@@ -107,6 +107,8 @@ class Gens64:
             raise ToolError("this server was started without --exe, so it can't launch Gens64")
 
         command = [self.exe, "--control-pipe", self.pipe_name]
+        if not args.get("visible"):
+            command.append("--hidden")
         if args.get("rom"):
             command.append(clean(args["rom"]))
         env = dict(os.environ)
@@ -122,7 +124,7 @@ class Gens64:
             if process.poll() is not None:
                 raise ToolError("Gens64 exited at startup with code %d" % process.returncode)
             if self.is_running():
-                return text_result("Gens64 started.")
+                return text_result("Gens64 started" + ("." if args.get("visible") else " in the background."))
             time.sleep(0.2)
         raise ToolError("Gens64 started but its control pipe did not open")
 
@@ -192,11 +194,14 @@ MEMORY_PROPERTIES = {
 
 # name: (description, input schema, handler)
 TOOLS = {
-    "gens_start": ("Launch Gens64, optionally with a ROM. Needs the server's --exe option.",
-                   schema({"rom": {"type": "string", "description": "Absolute ROM path."}}),
+    "gens_start": ("Launch Gens64, optionally with a ROM. Needs the server's --exe option. "
+                   "It runs in the background, with no window and no sound, unless visible is true.",
+                   schema({"rom": {"type": "string", "description": "Absolute ROM path."},
+                           "visible": {"type": "boolean",
+                                       "description": "Show the window and play the sound."}}),
                    Gens64.start),
     "gens_status": ("Get the system, game, frame count, whether the emulation is held, "
-                    "and whether a video is being recorded.",
+                    "whether a video is being recorded, and whether the window is shown.",
                     schema(), lambda g, a: g.simple("status")),
     "gens_load": ("Load a ROM. To start from its first frame, call gens_hold first.",
                   schema(FILE_PROPERTY, ["path"]), lambda g, a: g.simple("load", a, "path")),
@@ -234,6 +239,10 @@ TOOLS = {
     "gens_record_stop": ("Stop recording and make the video file. Returns its path once the file "
                          "is done, which can take about as long as the recording for large sizes.",
                          schema(), Gens64.record_stop),
+    "gens_show": ("Show the Gens64 window and play the sound, so that the user can watch.",
+                  schema(), lambda g, a: g.simple("show")),
+    "gens_hide": ("Hide the Gens64 window and mute it. It keeps running in the background.",
+                  schema(), lambda g, a: g.simple("hide")),
     "gens_savestate": ("Save the emulator state to a file.", schema(FILE_PROPERTY, ["path"]),
                        lambda g, a: g.simple("savestate", a, "path")),
     "gens_loadstate": ("Load the emulator state from a file.", schema(FILE_PROPERTY, ["path"]),
