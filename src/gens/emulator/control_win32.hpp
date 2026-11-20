@@ -51,4 +51,11 @@ void control_set_visible(int visible);
 // Non-zero if the Gens window is shown.
 int control_is_visible(void);
 
+/**
+ * control_ui_command(): A menu item or hotkey was used in the Gens window.
+ * While the emulation is held, nothing redraws the window by itself,
+ * so a loaded savestate or a reset would not show until the next step.
+ */
+void control_ui_command(void);
+
 #endif /* GENS_CONTROL_WIN32_HPP */

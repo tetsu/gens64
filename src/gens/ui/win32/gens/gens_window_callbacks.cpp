@@ -25,6 +25,7 @@
 #endif
 
 #include "emulator/g_main.hpp"
+#include "emulator/control_win32.hpp"
 #include "ui/gens_ui.hpp"
 
 #include "gens_window_callbacks.hpp"
@@ -217,6 +218,9 @@ LRESULT CALLBACK Gens_Window_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 					gens_common_menu_callback(LOWORD(wParam), state);
 					break;
 			}
+			
+			// Show the result even if the remote control holds the emulation.
+			control_ui_command();
 			break;
 		
 #ifdef GENS_DEBUGGER

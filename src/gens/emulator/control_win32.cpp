@@ -127,6 +127,10 @@ static bool restore_fullscreen = false;
 static unsigned int pending_frames = 0;
 static unsigned int frames_run = 0;
 
+// When the held window was last redrawn, so that on-screen messages
+// such as "STATE 0 SAVED" show up and go away while nothing runs.
+static DWORD last_held_flip = 0;
+
 
 /** Pipe I/O. **/
 
@@ -1046,6 +1050,12 @@ int control_update(void)
 
 	if (pending_frames == 0)
 	{
+		const DWORD now = GetTickCount();
+		if (now - last_held_flip >= 100)
+		{
+			last_held_flip = now;
+			vdraw_flip(1);
+		}
 		Sleep(1);
 		return 1;
 	}
@@ -1115,6 +1125,12 @@ void control_set_visible(int visible)
 int control_is_visible(void)
 {
 	return (window_visible ? 1 : 0);
+}
+
+
+void control_ui_command(void)
+{
+	redraw_held_frame();
 }
 
 
