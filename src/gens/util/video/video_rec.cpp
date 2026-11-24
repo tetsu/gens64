@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 // C++ includes.
@@ -996,6 +997,73 @@ int vrec_start(const char *filename)
 
 
 /**
+ * keep_window_alive(): Handle the window's messages while Gens64 waits,
+ * so that Windows doesn't mark it as not responding. Input, menu commands,
+ * dropped files and close requests are dropped: Gens64 can't act on them
+ * until the video is done.
+ */
+static void keep_window_alive(void)
+{
+#ifdef _WIN32
+	MSG msg;
+	while (pPeekMessageU(&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		if (msg.message == WM_QUIT)
+		{
+			// Leave it for the main loop.
+			PostQuitMessage((int)msg.wParam);
+			return;
+		}
+
+		if ((msg.message >= WM_KEYFIRST && msg.message <= WM_KEYLAST) ||
+		    (msg.message >= WM_MOUSEFIRST && msg.message <= WM_MOUSELAST) ||
+		    (msg.message >= WM_NCMOUSEMOVE && msg.message <= WM_NCXBUTTONDBLCLK) ||
+		    msg.message == WM_COMMAND || msg.message == WM_SYSCOMMAND ||
+		    msg.message == WM_DROPFILES || msg.message == WM_CLOSE)
+		{
+			continue;
+		}
+
+		TranslateMessage(&msg);
+		pDispatchMessageU(&msg);
+	}
+	Sleep(100);
+#else
+	usleep(100000);
+#endif
+}
+
+
+/**
+ * wait_job(): Wait for ffmpeg to make a job's video file.
+ * Shows how long it has taken, since a long video takes minutes.
+ * @param what What Gens64 is doing.
+ * @return ffmpeg's exit code.
+ */
+static int wait_job(job_t *job, const char *what)
+{
+	const time_t start = time(NULL);
+	time_t shown = (time_t)-1;
+	int code;
+	while (!child_exited(&job->child, &code))
+	{
+		const time_t now = time(NULL);
+		if (now != shown)
+		{
+			shown = now;
+			const int seconds = (int)(now - start);
+			char msg[160];
+			szprintf(msg, sizeof(msg), "%s %d:%02d", what, seconds / 60, seconds % 60);
+			vdraw_text_write(msg, MSG_LONG);
+			vdraw_flip(1);
+		}
+		keep_window_alive();
+	}
+	return code;
+}
+
+
+/**
  * finish(): End the recording.
  * @param error If not NULL, the recording failed for this reason, and the
  * files are kept as they are.
@@ -1040,7 +1108,8 @@ static int finish(const char *error, const char *reason, bool wait)
 		rec.log = NO_LOG;
 		if (wait)
 		{
-			rval = end_job(&job, child_finish(&job.child), reason);
+			const string what = string("Making the ") + vrec_size_name(VRec_Size) + " video...";
+			rval = end_job(&job, wait_job(&job, what.c_str()), reason);
 		}
 		else
 		{
@@ -1104,15 +1173,9 @@ void vrec_end(void)
 	if (VRec_Recording)
 		finish(NULL, NULL, true);
 
-	if (!jobs.empty())
-	{
-		// This can take a while, so say why Gens64 is still here.
-		vdraw_text_write("Finishing the video before exiting...", MSG_LONG);
-		vdraw_flip(1);
-	}
-
+	// This can take minutes, so say why Gens64 is still here.
 	for (size_t i = 0; i < jobs.size(); i++)
-		end_job(&jobs[i], child_finish(&jobs[i].child), NULL);
+		end_job(&jobs[i], wait_job(&jobs[i], "Finishing the video before exiting..."), NULL);
 	jobs.clear();
 }
 
